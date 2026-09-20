@@ -1,0 +1,23 @@
+{
+  "name": "mutms/moodle-auth_musaml",
+  "type": "moodle-auth",
+  "description": "MuTMS SAML authentication for Moodle LMS",
+  "keywords": [
+    "moodle",
+    "moodle-plugin",
+    "authentication",
+    "saml",
+    "sso"
+  ],
+  "homepage": "https://github.com/mutms/moodle-auth_musaml",
+  "license": "GPL-3.0-or-later",
+  "require": {
+    "moodle/composer-installer": "*",
+    "moodle/moodle": "5.3.*",
+    "mutms/moodle-tool_mulib": "*"
+  },
+  "support": {
+    "issues": "https://github.com/mutms/moodle-auth_musaml/issues",
+    "source": "https://github.com/mutms/moodle-auth_musaml"
+  }
+}

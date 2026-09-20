@@ -1,0 +1,41 @@
+<?php return array(
+    'root' => array(
+        'name' => '__root__',
+        'pretty_version' => 'dev-MOODLE_503_DEV',
+        'version' => 'dev-MOODLE_503_DEV',
+        'reference' => '2ab440422da098ebe379fa7bff54928796c02338',
+        'type' => 'library',
+        'install_path' => __DIR__ . '/../',
+        'aliases' => array(),
+        'dev' => false,
+    ),
+    'versions' => array(
+        '__root__' => array(
+            'pretty_version' => 'dev-MOODLE_503_DEV',
+            'version' => 'dev-MOODLE_503_DEV',
+            'reference' => '2ab440422da098ebe379fa7bff54928796c02338',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'onelogin/php-saml' => array(
+            'pretty_version' => 'dev-4.x-dev',
+            'version' => 'dev-4.x-dev',
+            'reference' => '1f40cd08cab1072bd21d1e2130be2a5308729e44',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../onelogin/php-saml',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'robrichards/xmlseclibs' => array(
+            'pretty_version' => '3.1.5',
+            'version' => '3.1.5.0',
+            'reference' => '03062be78178cbb5e8f605cd255dc32a14981f92',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../robrichards/xmlseclibs',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+    ),
+);

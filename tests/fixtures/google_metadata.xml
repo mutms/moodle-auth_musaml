@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Google Workspace identity provider metadata, with the domain id replaced and the
+     certificate replaced by a self signed one expiring in 2046. Google publishes no
+     metadata URL, the admin console offers this as a file. -->
+<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://accounts.google.com/o/saml2?idpid=C00example" validUntil="2031-09-20T14:19:03.000Z">
+  <md:IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+        <ds:X509Data>
+          <ds:X509Certificate>MIIDOTCCAiGgAwIBAgIUBJzrMlSEJ1bdzp8p2HD5fdHCb04wDQYJKoZIhvcNAQELBQAwLDEYMBYGA1UEAwwPaWRwLmV4YW1wbGUuY29tMRAwDgYDVQQKDAdFeGFtcGxlMB4XDTI2MDkyMTE3MzQxOVoXDTQ2MDkxNjE3MzQxOVowLDEYMBYGA1UEAwwPaWRwLmV4YW1wbGUuY29tMRAwDgYDVQQKDAdFeGFtcGxlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2SLOvYPYyB1X0p65b6TJUUFWDWfUDW+7SugPMD8R1pXXprxEA53U2eGL/5wSOSkmNFIwPWF3w1kW97tcAkmMb1wVis94+QpeJmkzUWTZx7MBtz+W0Ur6OQePG3ooi4jAbW7v/lFzMAQrhGholSzom9l7MDb1oP4cPmEHx5AxfLoFg+e+aQcClnzXfhmMJpftKHIX7XV40Aez3EWJumkHHO7rIx4Ej4vmhY/apmDH9DN8wn3SD6UMU7Xhn16RZBPtf2PcOO8QqElbNVekqehiNR8Qod+eW155i+gAb+ZCTB98hzLJGd9Kx8h0V468nOVMmOyW5E5DPOf94Tr1VEcLxwIDAQABo1MwUTAdBgNVHQ4EFgQUgC3G6vl49kLYvqcTI7Y0sLb62r8wHwYDVR0jBBgwFoAUgC3G6vl49kLYvqcTI7Y0sLb62r8wDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAz1uVKUurkuBSkFCBBj7Fi4ch9OLVn8Qj0xWaVr4tyCyC1MR71iIDh2AhoE2ixazkWMgdOLSZXve6OMrEHv0t5kuEh5/yTd1kb7Fs/6BLGMqifaMy1KrLZF6ZgIZ7SBdVHkitUu/u7YOdaPsQP5gT6WJ+3nGG/UYSsUGwb5A/1zAoRnG0wpymzU5YXi3qp1V/MZ141No3otR7Ot/Wq9eFZUI3+TqsPZeaoEbSrMvgg+vBoScTcYC8itsVIVyH+knc9PJyZeWp2hfru//g6Kr0C+zUCl783HUOWNEVe5PFMV2HGW8VQ0nAy9iW0xotaZCyTj5A4FN99wlNXXl8jk3TBA==</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat>
+    <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://accounts.google.com/o/saml2/idp?idpid=C00example"/>
+    <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://accounts.google.com/o/saml2/idp?idpid=C00example"/>
+  </md:IDPSSODescriptor>
+</md:EntityDescriptor>

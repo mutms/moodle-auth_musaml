@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<libraries>
+  <library>
+    <location>vendor</location>
+    <name>Composer autoloader</name>
+    <version>2.10.3</version>
+    <license>MIT</license>
+  </library>
+  <library>
+    <location>vendor/onelogin/php-saml</location>
+    <name>SAML PHP Toolkit</name>
+    <version>4.4.0-dev (4.x-dev branch, commit 1f40cd0)</version>
+    <license>MIT</license>
+  </library>
+  <library>
+    <location>vendor/robrichards/xmlseclibs</location>
+    <name>A PHP library for XML Security</name>
+    <version>3.1.5</version>
+    <license>BSD-3-Clause</license>
+  </library>
+</libraries>

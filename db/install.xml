@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="auth/musaml/db" VERSION="20260920" COMMENT="XMLDB file for SAML auth"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+    <TABLES>
+        <TABLE NAME="auth_musaml_idp" COMMENT="SAML identity providers">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+                <FIELD NAME="provider" TYPE="char" LENGTH="50" NOTNULL="true" DEFAULT="generic" SEQUENCE="false" COMMENT="Provider class name from classes/local/provider/, falls back to generic"/>
+                <FIELD NAME="metadataurl" TYPE="char" LENGTH="1333" NOTNULL="true" SEQUENCE="false" COMMENT="IDP metadata URL, refreshed after logins"/>
+                <FIELD NAME="name" TYPE="char" LENGTH="1333" NOTNULL="true" SEQUENCE="false" COMMENT="IDP name visible on the login page"/>
+                <FIELD NAME="enabled" TYPE="int" LENGTH="1" NOTNULL="true" SEQUENCE="false" COMMENT="Disabled idp is hidden and cannot be used"/>
+                <FIELD NAME="entityid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Entity ID of the IDP, SAML allows 1024 chars but 255 is the indexable limit and enough in practice"/>
+                <FIELD NAME="ssourl" TYPE="char" LENGTH="1333" NOTNULL="true" SEQUENCE="false" COMMENT="Single Sign-On URL"/>
+                <FIELD NAME="logouturl" TYPE="char" LENGTH="1333" NOTNULL="false" SEQUENCE="false" COMMENT="Single logout URL, empty when the IDP has none"/>
+                <FIELD NAME="certjson" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Cached metadata: certificates, NameID format, advertised attributes and refresh state"/>
+                <FIELD NAME="customsettingsjson" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Overrides of php-saml library settings in JSON format"/>
+                <FIELD NAME="attrsimple" TYPE="int" LENGTH="1" NOTNULL="true" SEQUENCE="false" COMMENT="If enabled short attribute names may be used instead of full URIs"/>
+                <FIELD NAME="mapattr" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Attribute holding the permanent IDP account id, nameid means the SAML NameID"/>
+                <FIELD NAME="autologin" TYPE="int" LENGTH="1" NOTNULL="true" SEQUENCE="false" COMMENT="If enabled and there is only one idp available user is logged in automatically"/>
+                <FIELD NAME="autocreate" TYPE="int" LENGTH="1" NOTNULL="true" SEQUENCE="false" COMMENT="If enabled unknown IDP accounts get a new user, needs username and email mappings"/>
+                <FIELD NAME="automap" TYPE="int" LENGTH="1" NOTNULL="true" SEQUENCE="false" COMMENT="If enabled unmapped musaml users are mapped at first login using attributes flagged usermapping"/>
+                <FIELD NAME="usernameprefix" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false" COMMENT="Optional lowercase username prefix, applied when creating and when matching users"/>
+                <FIELD NAME="tenantid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Tenant login page the IDP belongs to, NULL means all login pages"/>
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+            </KEYS>
+            <INDEXES>
+                <INDEX NAME="entityid" UNIQUE="true" FIELDS="entityid" COMMENT="The same IDP cannot be added twice"/>
+                <INDEX NAME="tenantid" UNIQUE="false" FIELDS="tenantid" COMMENT="Used instead of foreign key because multi-tenancy tables may not be available"/>
+            </INDEXES>
+        </TABLE>
+        <TABLE NAME="auth_musaml_user" COMMENT="Mapping of users to IDP accounts, created in advance or at first login">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+                <FIELD NAME="idpid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="guid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Permanent account id in the IDP"/>
+                <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="allowotherauth" TYPE="int" LENGTH="1" DEFAULT="0" NOTNULL="true" SEQUENCE="false" COMMENT="Allow login through the IDP for users kept on another auth method"/>
+                <FIELD NAME="automapped" TYPE="int" LENGTH="1" NOTNULL="true" SEQUENCE="false" COMMENT="1 when the mapping was created automatically at first login"/>
+                <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+                <KEY NAME="idpid" TYPE="foreign" FIELDS="idpid" REFTABLE="auth_musaml_idp" REFFIELDS="id"/>
+                <KEY NAME="userid" TYPE="foreign-unique" FIELDS="userid" REFTABLE="user" REFFIELDS="id" COMMENT="User can be mapped to one IDP only"/>
+            </KEYS>
+        </TABLE>
+        <TABLE NAME="auth_musaml_attribute" COMMENT="Mapping of IDP attributes to user fields">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+                <FIELD NAME="idpid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="idpattr" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Short or full IDP attribute name"/>
+                <FIELD NAME="userfield" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="User field name, may use profile_ prefix"/>
+                <FIELD NAME="sync" TYPE="int" LENGTH="1" NOTNULL="true" SEQUENCE="false" COMMENT="0 never, 1 when the user is created, 2 after each login"/>
+                <FIELD NAME="usermapping" TYPE="int" LENGTH="1" NOTNULL="true" SEQUENCE="false" COMMENT="1 means the attribute is used for automatic mapping, all flagged attributes must match"/>
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+                <KEY NAME="idpid" TYPE="foreign" FIELDS="idpid" REFTABLE="auth_musaml_idp" REFFIELDS="id"/>
+            </KEYS>
+        </TABLE>
+        <TABLE NAME="auth_musaml_login" COMMENT="Logins in progress, the identity provider response arrives without a Moodle session">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+                <FIELD NAME="idpid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="token" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false" COMMENT="Random value kept in a cookie of the browser that started the login"/>
+                <FIELD NAME="requestid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="ID of the sent authentication request, the response must answer it"/>
+                <FIELD NAME="wantsurl" TYPE="char" LENGTH="1333" NOTNULL="false" SEQUENCE="false" COMMENT="Where to go after the login"/>
+                <FIELD NAME="test" TYPE="int" LENGTH="1" NOTNULL="true" SEQUENCE="false" COMMENT="1 for an admin test login, nobody is logged in"/>
+                <FIELD NAME="ready" TYPE="int" LENGTH="1" NOTNULL="true" SEQUENCE="false" COMMENT="1 after the response was accepted, a second response is refused"/>
+                <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="User the response resolved to, NULL when there is none yet"/>
+                <FIELD NAME="resultjson" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Attributes of an accepted response, or the reason it failed"/>
+                <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="timeexpires" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Rows are deleted after this time"/>
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+                <KEY NAME="idpid" TYPE="foreign" FIELDS="idpid" REFTABLE="auth_musaml_idp" REFFIELDS="id"/>
+                <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+            </KEYS>
+            <INDEXES>
+                <INDEX NAME="token" UNIQUE="true" FIELDS="token"/>
+                <INDEX NAME="timeexpires" UNIQUE="false" FIELDS="timeexpires"/>
+            </INDEXES>
+        </TABLE>
+        <TABLE NAME="auth_musaml_assertion" COMMENT="Received assertion ids kept until they expire to detect replayed responses">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+                <FIELD NAME="idpid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+                <FIELD NAME="assertionid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="ID attribute of the assertion"/>
+                <FIELD NAME="timeexpires" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="NotOnOrAfter plus clock skew, rows are deleted after this time"/>
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+                <KEY NAME="idpid" TYPE="foreign" FIELDS="idpid" REFTABLE="auth_musaml_idp" REFFIELDS="id"/>
+            </KEYS>
+            <INDEXES>
+                <INDEX NAME="assertionid" UNIQUE="true" FIELDS="assertionid" COMMENT="Duplicate insert means replay"/>
+                <INDEX NAME="timeexpires" UNIQUE="false" FIELDS="timeexpires"/>
+            </INDEXES>
+        </TABLE>
+    </TABLES>
+</XMLDB>

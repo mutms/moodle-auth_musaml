@@ -1,0 +1,11 @@
+{
+  "config": {
+    "vendor-dir": "."
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "require": {
+    "onelogin/php-saml": "dev-4.x-dev",
+    "robrichards/xmlseclibs": "^3.1.5"
+  }
+}
