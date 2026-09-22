@@ -39,8 +39,8 @@ final class idp_create_metadata extends \tool_mulib\local\ajax_form {
     protected function definition(): void {
         $mform = $this->_form;
 
-        $mform->addElement('textarea', 'metadatasource', get_string('idp_metadatasource', 'auth_musaml'),
-            'rows="3" cols="80"');
+        $label = get_string('idp_metadatasource', 'auth_musaml');
+        $mform->addElement('textarea', 'metadatasource', $label, 'rows="3" cols="80"');
         $mform->setType('metadatasource', PARAM_RAW);
         $mform->addRule('metadatasource', null, 'required', null, 'client');
         $mform->addHelpButton('metadatasource', 'idp_metadatasource', 'auth_musaml');

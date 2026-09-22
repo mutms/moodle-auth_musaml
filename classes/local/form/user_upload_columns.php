@@ -32,17 +32,20 @@ final class user_upload_columns extends \tool_mulib\local\ajax_form {
     protected function definition(): void {
         $mform = $this->_form;
         $idp = $this->_customdata['idp'];
-        $rows = $this->_customdata['rows'];
+        $csvdata = $this->_customdata['csvdata'];
         $draftid = $this->_customdata['draftid'];
+        $rows = $csvdata->rows;
         $headers = $rows[0];
 
-        $mform->addElement('hidden', 'idpid');
-        $mform->setType('idpid', PARAM_INT);
-        $mform->setConstant('idpid', $idp->id);
+        // The form action carries no query string, so the page needs the id back.
+        $mform->addElement('hidden', 'id');
+        $mform->setType('id', PARAM_INT);
+        $mform->setConstant('id', $idp->id);
 
-        $mform->addElement('hidden', 'draftid');
-        $mform->setType('draftid', PARAM_INT);
-        $mform->setConstant('draftid', $draftid);
+        // Pass the original draftitemid through.
+        $mform->addElement('hidden', 'sourcefile');
+        $mform->setType('sourcefile', PARAM_INT);
+        $mform->setConstant('sourcefile', $draftid);
 
         $count = count($rows) - 1;
         $mform->addElement('static', 'info', '', get_string('import_columns_info', 'auth_musaml', $count));
@@ -65,27 +68,16 @@ final class user_upload_columns extends \tool_mulib\local\ajax_form {
     #[\Override]
     public function validation($data, $files): array {
         $errors = parent::validation($data, $files);
-        $rows = $this->_customdata['rows'];
-        $headers = $rows[0];
+        $headers = $this->_customdata['csvdata']->rows[0];
 
-        $used = [];
+        $columns = [];
         foreach (array_keys($headers) as $index) {
-            $value = $data['column_' . $index] ?? mapping_import::COLUMN_IGNORE;
-            if ($value === mapping_import::COLUMN_IGNORE) {
-                continue;
-            }
-            if (isset($used[$value])) {
-                $errors['column_' . $index] = get_string('import_error_columntwice', 'auth_musaml');
-            }
-            $used[$value] = true;
+            $columns[$index] = $data['column_' . $index] ?? mapping_import::COLUMN_IGNORE;
+        }
+        foreach (mapping_import::check_columns($headers, $columns) as $index => $errorcode) {
+            $errors['column_' . $index] = get_string($errorcode, 'auth_musaml');
         }
 
-        if (!isset($used[mapping_import::COLUMN_GUID])) {
-            $errors['column_0'] = get_string('import_error_noguid', 'auth_musaml');
-        }
-        if (count($used) < 2) {
-            $errors['column_0'] = get_string('import_error_nouser', 'auth_musaml');
-        }
         return $errors;
     }
 }

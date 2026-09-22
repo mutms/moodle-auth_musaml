@@ -47,8 +47,8 @@ final class idp_update extends \tool_mulib\local\ajax_form {
 
         $mform->addElement('static', 'entityidstatic', get_string('idp_entityid', 'auth_musaml'), s($idp->entityid));
 
-        $mform->addElement('textarea', 'metadatasource', get_string('idp_metadatasource', 'auth_musaml'),
-            'rows="3" cols="80"');
+        $label = get_string('idp_metadatasource', 'auth_musaml');
+        $mform->addElement('textarea', 'metadatasource', $label, 'rows="3" cols="80"');
         $mform->setType('metadatasource', PARAM_RAW);
         $mform->addHelpButton('metadatasource', 'idp_metadatasource', 'auth_musaml');
 

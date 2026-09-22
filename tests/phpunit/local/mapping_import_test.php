@@ -99,22 +99,120 @@ final class mapping_import_test extends \advanced_testcase {
         $this->assertSame([mapping_import::COLUMN_GUID], mapping_import::guess_columns(['IdpUserId']));
     }
 
-    public function test_store_and_forget_data(): void {
+    public function test_wizard_state_and_stages(): void {
         $this->setAdminUser();
         $rows = [['guid', 'email'], ['z-1', 'one@example.com']];
+        $columns = [0 => mapping_import::COLUMN_GUID, 1 => 'email'];
 
-        $this->assertNull(mapping_import::get_data(0));
-        $this->assertNull(mapping_import::get_data(42));
+        // Nothing stored yet, the wizard asks for the data.
+        foreach ([0, 42] as $draftid) {
+            $csvdata = mapping_import::get_data($draftid);
+            $this->assertSame([], $csvdata->rows);
+            $this->assertSame([], $csvdata->columns);
+            $this->assertSame([], $csvdata->options);
+            $this->assertTrue(mapping_import::is_source_stage($csvdata));
+        }
 
-        mapping_import::store_data(42, $rows);
-        $this->assertSame($rows, mapping_import::get_data(42));
+        // The source stage stores the rows, pasted or uploaded.
+        $formdata = (object)['sourcefile' => 42, 'csvtext' => "guid,email\nz-1,one@example.com",
+            'encoding' => 'UTF-8', 'delimiter_name' => mapping_import::DELIMITER_AUTO];
+        $csvdata = mapping_import::save_source($formdata);
 
-        // Storing again replaces the previous rows.
-        mapping_import::store_data(42, [['a'], ['b']]);
-        $this->assertSame([['a'], ['b']], mapping_import::get_data(42));
+        $this->assertSame($rows, $csvdata->rows);
+        $this->assertEquals($csvdata, mapping_import::get_data(42));
+        $this->assertFalse(mapping_import::is_source_stage($csvdata));
+        $this->assertTrue(mapping_import::is_columns_stage($csvdata));
+
+        // The columns stage stores what each column holds.
+        $csvdata = mapping_import::save_columns($csvdata, (object)['sourcefile' => 42,
+            'column_0' => mapping_import::COLUMN_GUID, 'column_1' => 'email']);
+
+        $this->assertSame($columns, $csvdata->columns);
+        $this->assertFalse(mapping_import::is_columns_stage($csvdata));
+        $this->assertTrue(mapping_import::is_options_stage($csvdata));
+        $this->assertSame($columns, mapping_import::get_data(42)->columns);
 
         mapping_import::delete_data(42);
-        $this->assertNull(mapping_import::get_data(42));
+        $this->assertTrue(mapping_import::is_source_stage(mapping_import::get_data(42)));
+    }
+
+    public function test_source_accepts_a_document_of_an_earlier_import(): void {
+        $this->setAdminUser();
+        $document = json_encode([
+            'rows' => [['guid', 'email'], ['z-1', 'one@example.com']],
+            'columns' => [mapping_import::COLUMN_GUID, 'email'],
+            'options' => ['setauth' => 1],
+        ]);
+
+        $csvdata = mapping_import::save_source((object)['sourcefile' => 43, 'csvtext' => $document,
+            'encoding' => 'UTF-8', 'delimiter_name' => mapping_import::DELIMITER_AUTO]);
+
+        // Everything was answered already, only the options page is left, and the
+        // options of the document are the defaults of its form.
+        $this->assertFalse(mapping_import::is_source_stage($csvdata));
+        $this->assertFalse(mapping_import::is_columns_stage($csvdata));
+        $this->assertTrue(mapping_import::is_options_stage($csvdata));
+        $this->assertSame(['setauth' => 1], $csvdata->options);
+
+        // Confirming the options ends the questions, the import may run.
+        $formdata = (object)['sourcefile' => 43, 'setauth' => 1, 'allowotherauth' => 0];
+        $csvdata = mapping_import::save_options($csvdata, $formdata);
+
+        $this->assertFalse($csvdata->options['preview']);
+        $this->assertFalse(mapping_import::is_options_stage($csvdata));
+        $this->assertFalse(mapping_import::is_options_stage(mapping_import::get_data(43)));
+
+        // A document that claims the options were confirmed must answer all of them.
+        foreach (mapping_import::get_option_names() as $name) {
+            $partial = clone($csvdata);
+            $partial->options = $csvdata->options;
+            unset($partial->options[$name]);
+            $this->assertTrue(mapping_import::is_options_stage($partial), $name);
+        }
+    }
+
+    public function test_unusable_sections_are_emptied(): void {
+        $rows = [['guid', 'email'], ['z-1', 'one@example.com']];
+
+        // Rows of different width are not a table, and one row is not data.
+        $this->assertSame('import_error_rowsize', mapping_import::check_rows([['a', 'b'], ['c']]));
+        $this->assertSame('import_error_empty', mapping_import::check_rows([['only header']]));
+        $this->assertNull(mapping_import::check_rows($rows));
+        $this->assertSame([], mapping_import::validate(['rows' => [['a', 'b'], ['c']]])->rows);
+        $this->assertSame([], mapping_import::validate(['rows' => [['only header']]])->rows);
+
+        // The form and the document are judged by the same column rules.
+        $good = [mapping_import::COLUMN_GUID, 'email'];
+        $this->assertSame([], mapping_import::check_columns($rows[0], $good));
+        $guidonly = [mapping_import::COLUMN_GUID, mapping_import::COLUMN_IGNORE];
+        $this->assertSame([0 => 'import_error_nouser'], mapping_import::check_columns($rows[0], $guidonly));
+        // An unknown meaning is reported, and it leaves nobody to map the row to.
+        $nosuch = [mapping_import::COLUMN_GUID, 'nosuchfield'];
+        $expected = [1 => 'import_error_columnunknown', 0 => 'import_error_nouser'];
+        $this->assertSame($expected, mapping_import::check_columns($rows[0], $nosuch));
+
+        // Columns must name one identity provider account id and one user column.
+        $twice = ['rows' => $rows, 'columns' => [mapping_import::COLUMN_GUID, mapping_import::COLUMN_GUID]];
+        $this->assertSame([], mapping_import::validate($twice)->columns);
+        $noguid = ['rows' => $rows, 'columns' => ['email', mapping_import::COLUMN_IGNORE]];
+        $this->assertSame([], mapping_import::validate($noguid)->columns);
+        $unknown = ['rows' => $rows, 'columns' => [mapping_import::COLUMN_GUID, 'nosuchfield']];
+        $this->assertSame([], mapping_import::validate($unknown)->columns);
+
+        // A column choice that says who is who is kept.
+        $good = ['rows' => $rows, 'columns' => [mapping_import::COLUMN_GUID, 'email']];
+        $this->assertSame([mapping_import::COLUMN_GUID, 'email'], mapping_import::validate($good)->columns);
+    }
+
+    /**
+     * The wizard document the import functions work on.
+     *
+     * @param array $rows
+     * @param array $columns
+     * @return \stdClass
+     */
+    private function csvdata(array $rows, array $columns): \stdClass {
+        return (object)['rows' => $rows, 'columns' => $columns, 'options' => []];
     }
 
     public function test_check_reports_every_problem(): void {
@@ -146,7 +244,7 @@ final class mapping_import_test extends \advanced_testcase {
             ['', 'ok@example.com'],
         ];
 
-        $outcomes = mapping_import::check($idp, $rows, $columns, $this->get_options(false));
+        $outcomes = mapping_import::check($idp, $this->csvdata($rows, $columns), $this->get_options(false));
         $results = array_column($outcomes, 'result');
         $this->assertSame([
             mapping_import::RESULT_CREATED,
@@ -169,13 +267,13 @@ final class mapping_import_test extends \advanced_testcase {
         $this->assertEquals($suspended->id, $outcomes[3]->userid);
 
         // With the skip options every problem becomes a skipped row instead.
-        $outcomes = mapping_import::check($idp, $rows, $columns, $this->get_options(true));
+        $outcomes = mapping_import::check($idp, $this->csvdata($rows, $columns), $this->get_options(true));
         $results = array_unique(array_column($outcomes, 'result'));
         $this->assertEqualsCanonicalizing([mapping_import::RESULT_CREATED, mapping_import::RESULT_SKIPPED], $results);
 
         // Allowing other authentication makes the manual account importable.
         $options = $this->get_options(false, ['allowotherauth' => 1]);
-        $outcomes = mapping_import::check($idp, [$rows[0], $rows[5]], $columns, $options);
+        $outcomes = mapping_import::check($idp, $this->csvdata([$rows[0], $rows[5]], $columns), $options);
         $this->assertSame(mapping_import::RESULT_CREATED, $outcomes[0]->result);
         $this->assertEquals($manual->id, $outcomes[0]->userid);
     }
@@ -188,11 +286,11 @@ final class mapping_import_test extends \advanced_testcase {
         $this->getDataGenerator()->create_user(['auth' => 'musaml', 'username' => 'john', 'email' => 'john@example.com']);
 
         $rows = [['guid', 'username', 'email'], ['z-1', 'jane', 'jane@example.com']];
-        $outcome = mapping_import::check($idp, $rows, $columns, $this->get_options(false))[0];
+        $outcome = mapping_import::check($idp, $this->csvdata($rows, $columns), $this->get_options(false))[0];
         $this->assertSame(mapping_import::RESULT_CREATED, $outcome->result);
 
         $rows = [['guid', 'username', 'email'], ['z-1', 'jane', 'john@example.com']];
-        $outcome = mapping_import::check($idp, $rows, $columns, $this->get_options(false))[0];
+        $outcome = mapping_import::check($idp, $this->csvdata($rows, $columns), $this->get_options(false))[0];
         $this->assertSame(mapping_import::RESULT_ERROR, $outcome->result);
         $this->assertStringContainsString('More than one user', $outcome->message);
     }
@@ -206,11 +304,11 @@ final class mapping_import_test extends \advanced_testcase {
 
         $rows = [['guid', 'email'], ['z-1', 'one@example.com'], ['z-2', 'nobody@example.com']];
 
-        $counts = mapping_import::import($idp, $rows, $columns, $this->get_options(false));
+        $counts = mapping_import::import($idp, $this->csvdata($rows, $columns), $this->get_options(false));
         $this->assertSame(1, $counts[mapping_import::RESULT_ERROR]);
         $this->assertSame(0, $DB->count_records('auth_musaml_user'), 'all or nothing');
 
-        $counts = mapping_import::import($idp, $rows, $columns, $this->get_options(true));
+        $counts = mapping_import::import($idp, $this->csvdata($rows, $columns), $this->get_options(true));
         $this->assertSame(1, $counts[mapping_import::RESULT_CREATED]);
         $this->assertSame(1, $counts[mapping_import::RESULT_SKIPPED]);
         $this->assertSame(1, $DB->count_records('auth_musaml_user'));
@@ -226,14 +324,14 @@ final class mapping_import_test extends \advanced_testcase {
 
         $rows = [['guid', 'username'], ['z-1', 'switchme']];
         $options = $this->get_options(true, ['setauth' => 1]);
-        $counts = mapping_import::import($idp, $rows, $columns, $options);
+        $counts = mapping_import::import($idp, $this->csvdata($rows, $columns), $options);
         $this->assertSame(1, $counts[mapping_import::RESULT_CREATED]);
         $this->assertSame('musaml', $DB->get_field('user', 'auth', ['id' => $manual->id]));
         $this->assertSame('0', mapping::fetch_by_userid($manual->id)->allowotherauth);
 
         $rows = [['guid', 'username'], ['z-2', 'keepme']];
         $options = $this->get_options(true, ['allowotherauth' => 1]);
-        mapping_import::import($idp, $rows, $columns, $options);
+        mapping_import::import($idp, $this->csvdata($rows, $columns), $options);
         $this->assertSame('manual', $DB->get_field('user', 'auth', ['id' => $keep->id]));
         $this->assertSame('1', mapping::fetch_by_userid($keep->id)->allowotherauth);
     }

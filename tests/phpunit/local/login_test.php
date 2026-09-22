@@ -170,8 +170,8 @@ final class login_test extends \advanced_testcase {
         $tenancygen = $this->getDataGenerator()->get_plugin_generator('tool_mutenancy');
         $tenant = $tenancygen->create_tenant();
         $idp = $gen->create_idp(['tenantid' => $tenant->id, 'autocreate' => 1]);
-        foreach (['UserName' => 'username', 'Email' => 'email', 'FirstName' => 'firstname',
-                'SurName' => 'lastname'] as $idpattr => $userfield) {
+        $fields = ['UserName' => 'username', 'Email' => 'email', 'FirstName' => 'firstname', 'SurName' => 'lastname'];
+        foreach ($fields as $idpattr => $userfield) {
             $gen->create_attribute(['idpid' => $idp->id, 'idpattr' => $idpattr, 'userfield' => $userfield,
                 'sync' => attribute::SYNC_ONCREATE]);
         }
@@ -205,9 +205,9 @@ final class login_test extends \advanced_testcase {
         $two = $tenancygen->create_tenant();
         $idpone = $gen->create_idp(['name' => 'One', 'tenantid' => $one->id, 'autocreate' => 1]);
         $idptwo = $gen->create_idp(['name' => 'Two', 'tenantid' => $two->id, 'autocreate' => 1, 'automap' => 1]);
+        $fields = ['UserName' => 'username', 'Email' => 'email', 'FirstName' => 'firstname', 'SurName' => 'lastname'];
         foreach ([$idpone, $idptwo] as $idp) {
-            foreach (['UserName' => 'username', 'Email' => 'email', 'FirstName' => 'firstname',
-                    'SurName' => 'lastname'] as $idpattr => $userfield) {
+            foreach ($fields as $idpattr => $userfield) {
                 $gen->create_attribute(['idpid' => $idp->id, 'idpattr' => $idpattr, 'userfield' => $userfield,
                     'sync' => attribute::SYNC_ONCREATE, 'usermapping' => ($userfield === 'username' ? 1 : 0)]);
             }

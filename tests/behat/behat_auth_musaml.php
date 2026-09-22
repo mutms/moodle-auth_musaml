@@ -81,8 +81,8 @@ final class behat_auth_musaml extends behat_base {
      */
     public function keycloak_idp_exists(string $name): void {
         if (!\auth_musaml\tests\keycloak_client::is_available()) {
-            throw new \Moodle\BehatExtension\Exception\SkippedException(
-                'TEST_AUTH_MUSAML_KEYCLOAK_* constants are not defined');
+            $reason = 'TEST_AUTH_MUSAML_KEYCLOAK_* constants are not defined';
+            throw new \Moodle\BehatExtension\Exception\SkippedException($reason);
         }
         \auth_musaml\local\saml::regenerate_sp_certificate();
         set_config('curlsecurityblockedhosts', '');

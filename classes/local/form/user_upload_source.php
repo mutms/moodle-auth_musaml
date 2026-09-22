@@ -37,14 +37,15 @@ final class user_upload_source extends \tool_mulib\local\ajax_form {
         $mform = $this->_form;
         $idp = $this->_customdata['idp'];
 
-        $mform->addElement('hidden', 'idpid');
-        $mform->setType('idpid', PARAM_INT);
-        $mform->setConstant('idpid', $idp->id);
+        // The form action carries no query string, so the page needs the id back.
+        $mform->addElement('hidden', 'id');
+        $mform->setType('id', PARAM_INT);
+        $mform->setConstant('id', $idp->id);
 
         $mform->addElement('static', 'info', '', get_string('import_source_info', 'auth_musaml'));
 
-        $filetypes = ['accepted_types' => ['.csv', '.txt']];
-        $mform->addElement('filepicker', 'csvfile', get_string('import_file', 'auth_musaml'), null, $filetypes);
+        $filetypes = ['accepted_types' => ['.csv', '.txt', '.json']];
+        $mform->addElement('filepicker', 'sourcefile', get_string('import_file', 'auth_musaml'), null, $filetypes);
 
         $textareaoptions = ['rows' => 8, 'cols' => 70, 'class' => 'text-monospace'];
         $mform->addElement('textarea', 'csvtext', get_string('import_text', 'auth_musaml'), $textareaoptions);
@@ -63,38 +64,31 @@ final class user_upload_source extends \tool_mulib\local\ajax_form {
 
     #[\Override]
     public function validation($data, $files): array {
-        global $USER;
-
         $errors = parent::validation($data, $files);
 
-        $content = trim((string)($data['csvtext'] ?? ''));
-        $draftid = (int)($data['csvfile'] ?? 0);
-        if ($draftid) {
-            $fs = get_file_storage();
-            $context = \core\context\user::instance($USER->id);
-            $areafiles = $fs->get_area_files($context->id, 'user', 'draft', $draftid, 'id DESC', false);
-            if ($areafiles) {
-                $file = reset($areafiles);
-                $content = trim($file->get_content());
+        $content = mapping_import::get_source_content((object)$data);
+        if ($content === '') {
+            $errors['sourcefile'] = get_string('import_error_source', 'auth_musaml');
+            return $errors;
+        }
+
+        // Only a check, the page stores what the import needs.
+        $stored = json_decode($content, true);
+        if (is_array($stored) && isset($stored['rows'])) {
+            $rows = is_array($stored['rows']) ? $stored['rows'] : [];
+        } else {
+            try {
+                $rows = mapping_import::parse($content, $data['encoding'], $data['delimiter_name']);
+            } catch (coding_exception $e) {
+                $errors['sourcefile'] = $e->getMessage();
+                return $errors;
             }
         }
-        if ($content === '') {
-            $errors['csvfile'] = get_string('import_error_source', 'auth_musaml');
-            return $errors;
+
+        if ($errorcode = mapping_import::check_rows($rows)) {
+            $errors['sourcefile'] = get_string($errorcode, 'auth_musaml');
         }
 
-        try {
-            $rows = mapping_import::parse($content, $data['encoding'], $data['delimiter_name']);
-        } catch (coding_exception $e) {
-            $errors['csvfile'] = $e->getMessage();
-            return $errors;
-        }
-        if (count($rows) < 2) {
-            $errors['csvfile'] = get_string('import_error_empty', 'auth_musaml');
-            return $errors;
-        }
-
-        mapping_import::store_data($draftid ?: -1, $rows);
         return $errors;
     }
 }

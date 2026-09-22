@@ -36,8 +36,9 @@ require_capability('moodle/site:config', \core\context\system::instance());
 
 $certificate = saml::get_sp_certificate();
 if ($certificate === null) {
-    redirect(new \core\url('/auth/musaml/management/sp.php'),
-        get_string('sp_cert_missing', 'auth_musaml'), null, \core\output\notification::NOTIFY_WARNING);
+    $spurl = new \core\url('/auth/musaml/management/sp.php');
+    $warning = \core\output\notification::NOTIFY_WARNING;
+    redirect($spurl, get_string('sp_cert_missing', 'auth_musaml'), null, $warning);
 }
 
 $host = parse_url($CFG->wwwroot, PHP_URL_HOST) ?: 'moodle';

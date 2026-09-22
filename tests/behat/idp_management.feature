@@ -198,21 +198,21 @@ Feature: SAML identity provider management
     # The column meaning is guessed from the header row.
     Then I should see "3 rows were read"
     And I press "Continue"
+    # The options page previews what the import would do right now.
     Then I should see "Import options"
+    And I should see "Ready to import: 2"
+    And I should see "Skipped: 1"
     When I set the following fields to these values:
       | Skip rows without a matching user | 0 |
-    And I press "Check the data"
+    And I press "Refresh preview"
     # A row without a user stops the import until it is skipped.
-    Then I should see "Nothing is written until"
-    And I should see "No user matches"
+    Then I should see "No user matches"
     And I should see "Problems: 1"
-    And I should not see "Import mappings"
     When I set the following fields to these values:
       | Skip rows without a matching user | 1 |
-    And I press "Check the data"
+    And I press "Refresh preview"
     Then I should see "Ready to import: 2"
-    And I should see "Skipped: 1"
-    When I press "Import mappings"
+    And I press "Import mappings"
     Then I should see "Imported 2 user mappings, skipped 1"
     And I should see "One User"
     And I should see "Two User"
@@ -234,7 +234,7 @@ Feature: SAML identity provider management
     When I click on "Actions" "button"
     And I click on "Import user mappings" "link"
     # A spreadsheet saves and copies its columns separated by tabs.
-    And I upload "auth/musaml/tests/fixtures/user_mappings_tabs.csv" file to "CSV file" filemanager
+    And I upload "auth/musaml/tests/fixtures/user_mappings_tabs.csv" file to "Source file" filemanager
     And I press "Continue"
     # The separator is detected, nobody has to know a spreadsheet uses tabs.
     Then I should see "1 rows were read"
@@ -253,13 +253,10 @@ Feature: SAML identity provider management
     And I am on the "Some IDP" "auth_musaml > idp mappings" page
     When I click on "Actions" "button"
     And I click on "Import user mappings" "link"
-    And I upload "auth/musaml/tests/fixtures/user_mappings.csv" file to "CSV file" filemanager
+    And I upload "auth/musaml/tests/fixtures/user_mappings.csv" file to "Source file" filemanager
     And I press "Continue"
     Then I should see "3 rows were read"
     And I press "Continue"
-    When I set the following fields to these values:
-      | Skip rows without a matching user | 1 |
-    And I press "Check the data"
     Then I should see "Ready to import: 2"
     And I should see "Skipped: 1"
     When I press "Import mappings"
