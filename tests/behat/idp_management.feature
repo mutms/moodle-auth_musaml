@@ -195,8 +195,9 @@ Feature: SAML identity provider management
     z-3,nobody@example.com
     """
     And I press "Continue"
-    # The column meaning is guessed from the header row.
-    Then I should see "3 rows were read"
+    # The column meaning and the header line are guessed from the first row.
+    Then I should see "4 rows were read"
+    And the field "First line holds column names" matches value "1"
     And I press "Continue"
     # The options page previews what the import would do right now.
     Then I should see "Import options"
@@ -222,6 +223,33 @@ Feature: SAML identity provider management
     Then I should see "SAML authentication"
 
   @_file_upload
+  Scenario: Data without a header line is imported as it is
+    Given the following "auth_musaml > idps" exist:
+      | name     | mapattr |
+      | Some IDP | UserID  |
+    And the following "users" exist:
+      | username | firstname | lastname | email           | auth   |
+      | one      | One       | User     | one@example.com | musaml |
+      | two      | Two       | User     | two@example.com | musaml |
+    And I log in as "admin"
+    And I am on the "Some IDP" "auth_musaml > idp mappings" page
+    When I click on "Actions" "button"
+    And I click on "Import user mappings" "link"
+    And I upload "auth/musaml/tests/fixtures/user_mappings_noheader.csv" file to "Source file" filemanager
+    And I press "Continue"
+    # Nothing names the columns, so the first line is data and has to be described by hand.
+    Then I should see "2 rows were read"
+    And the field "First line holds column names" matches value "0"
+    And I should see "one@example.com"
+    When I set the following fields to these values:
+      | Column 1 | Identity provider account ID |
+      | Column 2 | Email address                |
+    And I press "Continue"
+    Then I should see "Ready to import: 2"
+    And I press "Import mappings"
+    Then I should see "Imported 2 user mappings, skipped 0"
+
+  @_file_upload
   Scenario: Tab separated data is recognised and imported
     Given the following "auth_musaml > idps" exist:
       | name     | mapattr |
@@ -237,7 +265,7 @@ Feature: SAML identity provider management
     And I upload "auth/musaml/tests/fixtures/user_mappings_tabs.csv" file to "Source file" filemanager
     And I press "Continue"
     # The separator is detected, nobody has to know a spreadsheet uses tabs.
-    Then I should see "1 rows were read"
+    Then I should see "2 rows were read"
     And I should see "one@example.com"
 
   @_file_upload
@@ -255,7 +283,7 @@ Feature: SAML identity provider management
     And I click on "Import user mappings" "link"
     And I upload "auth/musaml/tests/fixtures/user_mappings.csv" file to "Source file" filemanager
     And I press "Continue"
-    Then I should see "3 rows were read"
+    Then I should see "4 rows were read"
     And I press "Continue"
     Then I should see "Ready to import: 2"
     And I should see "Skipped: 1"

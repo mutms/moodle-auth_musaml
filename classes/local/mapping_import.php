@@ -38,8 +38,11 @@ final class mapping_import {
     /** @var string csv_import_reader type */
     public const CSVTYPE = 'auth_musaml_user';
 
-    /** @var int rows of the preview table */
+    /** @var int rows of the dry run preview table */
     public const PREVIEW_ROWS = 10;
+
+    /** @var int rows of the data preview shown with the column meanings */
+    public const DATA_PREVIEW_ROWS = 4;
 
     /** @var int stored data is ignored after this many seconds */
     public const DATA_TTL = DAYSECS;
@@ -147,12 +150,13 @@ final class mapping_import {
 
         $columns = $stored['columns'] ?? null;
         if (is_array($columns)) {
-            $clean = [];
+            $map = [];
             foreach ($csvdata->rows[0] as $index => $unused) {
-                $value = $columns[$index] ?? null;
-                $clean[$index] = is_string($value) ? $value : self::COLUMN_IGNORE;
+                $value = $columns['map'][$index] ?? null;
+                $map[$index] = is_string($value) ? $value : self::COLUMN_IGNORE;
             }
-            if (!self::check_columns($csvdata->rows[0], $clean)) {
+            $clean = ['headers' => $columns['headers'] ?? null, 'map' => $map];
+            if (!self::check_columns($csvdata->rows, $clean)) {
                 $csvdata->columns = $clean;
             }
         }
@@ -186,7 +190,7 @@ final class mapping_import {
      * @return string|null string identifier of the problem
      */
     public static function check_rows(array $rows): ?string {
-        if (count($rows) < 2) {
+        if (count($rows) < 1) {
             return 'import_error_empty';
         }
 
@@ -210,44 +214,69 @@ final class mapping_import {
     }
 
     /**
-     * Problems with the meaning given to the columns, empty when they can be used.
+     * Problems with the columns section, empty when it can be used.
      *
      * The form and the stored document are checked by the same rules, a document may
      * come from an upload and must meet what the form would demand.
      *
-     * @param array $headers first row of the data
-     * @param array $columns column index => column value
-     * @return array string identifier of the problem, keyed by column index
+     * @param array $rows all rows of the data
+     * @param array $columns section holding the headers flag and the column map
+     * @return array string identifier of the problem, keyed by the name of the form element
      */
-    public static function check_columns(array $headers, array $columns): array {
+    public static function check_columns(array $rows, array $columns): array {
         $errors = [];
+
+        $headers = $columns['headers'] ?? null;
+        if (!is_bool($headers)) {
+            $errors['headers'] = 'import_error_headers';
+        } else if ($headers && count($rows) < 2) {
+            $errors['headers'] = 'import_error_nodatarows';
+        }
+
+        $map = $columns['map'] ?? null;
+        if (!is_array($map)) {
+            $errors['column_0'] = 'import_error_columnunknown';
+            return $errors;
+        }
+
         $menu = self::get_column_menu();
         $used = [];
-
-        foreach (array_keys($headers) as $index) {
-            $value = $columns[$index] ?? self::COLUMN_IGNORE;
+        foreach (array_keys($rows[0] ?? []) as $index) {
+            $value = $map[$index] ?? self::COLUMN_IGNORE;
             if (!is_string($value) || !array_key_exists($value, $menu)) {
-                $errors[$index] = 'import_error_columnunknown';
+                $errors['column_' . $index] = 'import_error_columnunknown';
                 continue;
             }
             if ($value === self::COLUMN_IGNORE) {
                 continue;
             }
             if (isset($used[$value])) {
-                $errors[$index] = 'import_error_columntwice';
+                $errors['column_' . $index] = 'import_error_columntwice';
             }
             $used[$value] = true;
         }
 
         if (!isset($used[self::COLUMN_GUID])) {
-            $errors[0] = 'import_error_noguid';
+            $errors['column_0'] = 'import_error_noguid';
         }
         if (count($used) < 2) {
             // One column says who the identity provider means, another who we mean.
-            $errors[0] = 'import_error_nouser';
+            $errors['column_0'] = 'import_error_nouser';
         }
 
         return $errors;
+    }
+
+    /**
+     * Rows that hold data, the column names are not one of them.
+     *
+     * Only for data that passed the columns stage.
+     *
+     * @param stdClass $csvdata
+     * @return array
+     */
+    public static function get_data_rows(stdClass $csvdata): array {
+        return array_slice($csvdata->rows, empty($csvdata->columns['headers']) ? 0 : 1);
     }
 
     /**
@@ -281,7 +310,7 @@ final class mapping_import {
      * @return bool
      */
     public static function is_columns_stage(stdClass $csvdata): bool {
-        return !$csvdata->columns || (bool)self::check_columns($csvdata->rows[0], $csvdata->columns);
+        return !$csvdata->columns || (bool)self::check_columns($csvdata->rows, $csvdata->columns);
     }
 
     /**
@@ -351,11 +380,11 @@ final class mapping_import {
      * @return stdClass keys: rows, columns, options
      */
     public static function save_columns(stdClass $csvdata, stdClass $formdata): stdClass {
-        $columns = [];
+        $map = [];
         foreach ($csvdata->rows[0] as $index => $unused) {
-            $columns[$index] = $formdata->{'column_' . $index} ?? self::COLUMN_IGNORE;
+            $map[$index] = $formdata->{'column_' . $index} ?? self::COLUMN_IGNORE;
         }
-        $csvdata->columns = $columns;
+        $csvdata->columns = ['headers' => !empty($formdata->headers), 'map' => $map];
 
         return self::store_data((int)$formdata->sourcefile, $csvdata);
     }
@@ -597,8 +626,8 @@ final class mapping_import {
      */
     public static function check(stdClass $idp, stdClass $csvdata, stdClass $options): array {
         $outcomes = [];
-        foreach (array_slice($csvdata->rows, 1) as $row) {
-            $outcomes[] = self::check_row($idp, $row, $csvdata->columns, $options);
+        foreach (self::get_data_rows($csvdata) as $row) {
+            $outcomes[] = self::check_row($idp, $row, $csvdata->columns['map'], $options);
         }
         return $outcomes;
     }
@@ -658,6 +687,25 @@ final class mapping_import {
         $outcome->result = $skip ? self::RESULT_SKIPPED : self::RESULT_ERROR;
         $outcome->message = get_string($errorcode, 'auth_musaml', $a);
         return $outcome;
+    }
+
+    /**
+     * Does the first row look like column names rather than data?
+     *
+     * Names of the database fields and of the identity provider account id are what an
+     * export of an earlier import holds, so such a file configures itself.
+     *
+     * @param array $row first row of the data
+     * @return bool
+     */
+    public static function guess_headers(array $row): bool {
+        $guesses = self::guess_columns($row);
+        if (!in_array(self::COLUMN_GUID, $guesses, true)) {
+            return false;
+        }
+        $named = array_filter($guesses, fn($guess) => $guess !== self::COLUMN_IGNORE);
+
+        return count($named) > 1;
     }
 
     /**

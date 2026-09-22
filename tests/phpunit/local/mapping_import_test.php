@@ -99,10 +99,35 @@ final class mapping_import_test extends \advanced_testcase {
         $this->assertSame([mapping_import::COLUMN_GUID], mapping_import::guess_columns(['IdpUserId']));
     }
 
+    public function test_guess_headers(): void {
+        // Names of the database fields and of the account id say the line is a header.
+        $this->assertTrue(mapping_import::guess_headers(['guid', 'email']));
+        $this->assertTrue(mapping_import::guess_headers(['UserID', 'User name', 'Department']));
+
+        // An account id alone is not enough, and data does not look like names.
+        $this->assertFalse(mapping_import::guess_headers(['guid', 'Department']));
+        $this->assertFalse(mapping_import::guess_headers(['z-1', 'one@example.com']));
+    }
+
+    public function test_data_without_a_header_line(): void {
+        $idp = $this->get_generator()->create_idp();
+        $user = $this->getDataGenerator()->create_user(['email' => 'one@example.com', 'auth' => 'musaml']);
+        $rows = [['z-1', 'one@example.com']];
+        $columns = [0 => mapping_import::COLUMN_GUID, 1 => 'email'];
+
+        // The first row is data, so it is checked and imported like any other.
+        $csvdata = $this->csvdata($rows, $columns, false);
+        $this->assertSame($rows, mapping_import::get_data_rows($csvdata));
+
+        $counts = mapping_import::import($idp, $csvdata, $this->get_options(false));
+        $this->assertSame(1, $counts[mapping_import::RESULT_CREATED]);
+        $this->assertSame('z-1', mapping::fetch_by_userid($user->id)->guid);
+    }
+
     public function test_wizard_state_and_stages(): void {
         $this->setAdminUser();
         $rows = [['guid', 'email'], ['z-1', 'one@example.com']];
-        $columns = [0 => mapping_import::COLUMN_GUID, 1 => 'email'];
+        $columns = ['headers' => true, 'map' => [0 => mapping_import::COLUMN_GUID, 1 => 'email']];
 
         // Nothing stored yet, the wizard asks for the data.
         foreach ([0, 42] as $draftid) {
@@ -124,7 +149,7 @@ final class mapping_import_test extends \advanced_testcase {
         $this->assertTrue(mapping_import::is_columns_stage($csvdata));
 
         // The columns stage stores what each column holds.
-        $csvdata = mapping_import::save_columns($csvdata, (object)['sourcefile' => 42,
+        $csvdata = mapping_import::save_columns($csvdata, (object)['sourcefile' => 42, 'headers' => 1,
             'column_0' => mapping_import::COLUMN_GUID, 'column_1' => 'email']);
 
         $this->assertSame($columns, $csvdata->columns);
@@ -140,7 +165,7 @@ final class mapping_import_test extends \advanced_testcase {
         $this->setAdminUser();
         $document = json_encode([
             'rows' => [['guid', 'email'], ['z-1', 'one@example.com']],
-            'columns' => [mapping_import::COLUMN_GUID, 'email'],
+            'columns' => ['headers' => true, 'map' => [mapping_import::COLUMN_GUID, 'email']],
             'options' => ['setauth' => 1],
         ]);
 
@@ -174,34 +199,40 @@ final class mapping_import_test extends \advanced_testcase {
     public function test_unusable_sections_are_emptied(): void {
         $rows = [['guid', 'email'], ['z-1', 'one@example.com']];
 
-        // Rows of different width are not a table, and one row is not data.
+        // Rows of different width are not a table, a single row may still be data.
         $this->assertSame('import_error_rowsize', mapping_import::check_rows([['a', 'b'], ['c']]));
-        $this->assertSame('import_error_empty', mapping_import::check_rows([['only header']]));
+        $this->assertSame('import_error_empty', mapping_import::check_rows([]));
+        $this->assertNull(mapping_import::check_rows([['z-1', 'one@example.com']]));
         $this->assertNull(mapping_import::check_rows($rows));
         $this->assertSame([], mapping_import::validate(['rows' => [['a', 'b'], ['c']]])->rows);
-        $this->assertSame([], mapping_import::validate(['rows' => [['only header']]])->rows);
 
         // The form and the document are judged by the same column rules.
-        $good = [mapping_import::COLUMN_GUID, 'email'];
-        $this->assertSame([], mapping_import::check_columns($rows[0], $good));
+        $map = [mapping_import::COLUMN_GUID, 'email'];
+        $this->assertSame([], mapping_import::check_columns($rows, ['headers' => true, 'map' => $map]));
         $guidonly = [mapping_import::COLUMN_GUID, mapping_import::COLUMN_IGNORE];
-        $this->assertSame([0 => 'import_error_nouser'], mapping_import::check_columns($rows[0], $guidonly));
+        $expected = ['column_0' => 'import_error_nouser'];
+        $this->assertSame($expected, mapping_import::check_columns($rows, ['headers' => true, 'map' => $guidonly]));
         // An unknown meaning is reported, and it leaves nobody to map the row to.
         $nosuch = [mapping_import::COLUMN_GUID, 'nosuchfield'];
-        $expected = [1 => 'import_error_columnunknown', 0 => 'import_error_nouser'];
-        $this->assertSame($expected, mapping_import::check_columns($rows[0], $nosuch));
+        $expected = ['column_1' => 'import_error_columnunknown', 'column_0' => 'import_error_nouser'];
+        $this->assertSame($expected, mapping_import::check_columns($rows, ['headers' => true, 'map' => $nosuch]));
+        // The headers flag has to be answered, and it must leave data behind.
+        $this->assertSame(['headers' => 'import_error_headers'], mapping_import::check_columns($rows, ['map' => $map]));
+        $onerow = [['z-1', 'one@example.com']];
+        $expected = ['headers' => 'import_error_nodatarows'];
+        $this->assertSame($expected, mapping_import::check_columns($onerow, ['headers' => true, 'map' => $map]));
 
         // Columns must name one identity provider account id and one user column.
-        $twice = ['rows' => $rows, 'columns' => [mapping_import::COLUMN_GUID, mapping_import::COLUMN_GUID]];
-        $this->assertSame([], mapping_import::validate($twice)->columns);
-        $noguid = ['rows' => $rows, 'columns' => ['email', mapping_import::COLUMN_IGNORE]];
-        $this->assertSame([], mapping_import::validate($noguid)->columns);
-        $unknown = ['rows' => $rows, 'columns' => [mapping_import::COLUMN_GUID, 'nosuchfield']];
-        $this->assertSame([], mapping_import::validate($unknown)->columns);
+        $section = ['headers' => true, 'map' => [mapping_import::COLUMN_GUID, mapping_import::COLUMN_GUID]];
+        $this->assertSame([], mapping_import::validate(['rows' => $rows, 'columns' => $section])->columns);
+        $section = ['headers' => true, 'map' => ['email', mapping_import::COLUMN_IGNORE]];
+        $this->assertSame([], mapping_import::validate(['rows' => $rows, 'columns' => $section])->columns);
+        $section = ['headers' => true, 'map' => [mapping_import::COLUMN_GUID, 'nosuchfield']];
+        $this->assertSame([], mapping_import::validate(['rows' => $rows, 'columns' => $section])->columns);
 
-        // A column choice that says who is who is kept.
-        $good = ['rows' => $rows, 'columns' => [mapping_import::COLUMN_GUID, 'email']];
-        $this->assertSame([mapping_import::COLUMN_GUID, 'email'], mapping_import::validate($good)->columns);
+        // A column choice that says who is who is kept, together with the headers flag.
+        $section = ['headers' => false, 'map' => $map];
+        $this->assertSame($section, mapping_import::validate(['rows' => $rows, 'columns' => $section])->columns);
     }
 
     /**
@@ -209,10 +240,11 @@ final class mapping_import_test extends \advanced_testcase {
      *
      * @param array $rows
      * @param array $columns
+     * @param bool $headers is the first row the column names?
      * @return \stdClass
      */
-    private function csvdata(array $rows, array $columns): \stdClass {
-        return (object)['rows' => $rows, 'columns' => $columns, 'options' => []];
+    private function csvdata(array $rows, array $columns, bool $headers = true): \stdClass {
+        return (object)['rows' => $rows, 'columns' => ['headers' => $headers, 'map' => $columns], 'options' => []];
     }
 
     public function test_check_reports_every_problem(): void {
