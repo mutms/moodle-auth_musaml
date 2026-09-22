@@ -44,7 +44,7 @@ final class user_upload_source extends \tool_mulib\local\ajax_form {
 
         $mform->addElement('static', 'info', '', get_string('import_source_info', 'auth_musaml'));
 
-        $filetypes = ['accepted_types' => ['.csv', '.txt', '.json']];
+        $filetypes = ['accepted_types' => ['.csv', '.tsv', '.txt']];
         $mform->addElement('filepicker', 'sourcefile', get_string('import_file', 'auth_musaml'), null, $filetypes);
 
         $textareaoptions = ['rows' => 8, 'cols' => 70, 'class' => 'text-monospace'];
