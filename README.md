@@ -70,8 +70,8 @@ for it and the quirks to expect. Anything else uses the generic provider.
 Logins must start at this site, so the application tiles in Entra, Okta and Google portals
 do not work. This is on purpose.
 
-A login starting at the identity provider lets anyone with a valid assertion put another
-person's browser into their account, which is considered to be a security issue.
+A login started at the identity provider lets an attacker log someone else's browser into
+the attacker's account.
 
 ## Compared with auth_saml2
 

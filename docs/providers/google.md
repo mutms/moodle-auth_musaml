@@ -52,21 +52,13 @@ Admin console, Apps, Web and mobile apps, Add app, **Add custom SAML app**.
 
 ## Quirks
 
-**The user id is an email address.** Google sends the address as NameID and offers no
-permanent identifier. Everything else in this plugin assumes a permanent id, this
-provider is the exception.
+**The user id is an email address.** Google offers no permanent identifier, so when a
+Workspace administrator changes a user's primary address the identity provider account
+id changes too. The next login fails with "No user is mapped to identity provider
+account", or creates a second account when automatic account creation is on.
 
-A Workspace administrator can change a user's primary address, and the NameID follows it.
-Google keeps the old address as an alias so mail still arrives, but the alias is not what
-SAML sends, so the identity provider account id changes with the rename.
-
-Fix the mapping rather than the person: open Mapped users, edit their row and put the new
-address in "Identity provider account ID". The Moodle account, its history and its grades
-stay as they are.
-
-Left alone, the next login either fails with "No user is mapped to identity provider
-account", or, with automatic account creation on, makes a second account and leaves the
-first one behind.
+Fix it on Mapped users: edit the user's row and put the new address in "Identity provider
+account ID". The Moodle account stays as it is.
 
 **No logout service.** Google has none, so a Moodle logout ends the Moodle session only.
 

@@ -132,7 +132,7 @@ final class mapping_import {
     }
 
     /**
-     * Keep only the sections that can be used, a document may also come from an upload.
+     * Keep only the sections that can be used.
      *
      * @param array $stored decoded document
      * @return stdClass keys: rows, columns, options
@@ -336,7 +336,7 @@ final class mapping_import {
     }
 
     /**
-     * Store the data of the source stage, pasted, uploaded CSV or a whole document.
+     * Store the data of the source stage, pasted or uploaded CSV.
      *
      * @param stdClass $formdata data of the source form
      * @return stdClass keys: rows, columns, options
@@ -344,14 +344,9 @@ final class mapping_import {
     public static function save_source(stdClass $formdata): stdClass {
         $draftid = (int)$formdata->sourcefile;
         $content = self::get_source_content($formdata);
+        $rows = self::parse($content, $formdata->encoding, $formdata->delimiter_name);
 
-        $stored = json_decode($content, true);
-        if (!is_array($stored) || !isset($stored['rows'])) {
-            // Not a document of an earlier import, so it is the CSV text itself.
-            $stored = ['rows' => self::parse($content, $formdata->encoding, $formdata->delimiter_name)];
-        }
-
-        return self::store_data($draftid, self::validate($stored));
+        return self::store_data($draftid, self::validate(['rows' => $rows]));
     }
 
     /**

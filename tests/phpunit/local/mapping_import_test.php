@@ -161,18 +161,15 @@ final class mapping_import_test extends \advanced_testcase {
         $this->assertTrue(mapping_import::is_source_stage(mapping_import::get_data(42)));
     }
 
-    public function test_source_accepts_a_document_of_an_earlier_import(): void {
+    public function test_options_stage_needs_every_option(): void {
         $this->setAdminUser();
-        $document = json_encode([
+        $csvdata = mapping_import::validate([
             'rows' => [['guid', 'email'], ['z-1', 'one@example.com']],
             'columns' => ['headers' => true, 'map' => [mapping_import::COLUMN_GUID, 'email']],
             'options' => ['setauth' => 1],
         ]);
 
-        $csvdata = mapping_import::save_source((object)['sourcefile' => 43, 'csvtext' => $document,
-            'encoding' => 'UTF-8', 'delimiter_name' => mapping_import::DELIMITER_AUTO]);
-
-        // Everything was answered already, only the options page is left, and the
+        // Everything else was answered already, only the options page is left, and the
         // options of the document are the defaults of its form.
         $this->assertFalse(mapping_import::is_source_stage($csvdata));
         $this->assertFalse(mapping_import::is_columns_stage($csvdata));

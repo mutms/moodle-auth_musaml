@@ -74,6 +74,8 @@ Change these only with the maintainer.
   `idp::setup_page()` would enforce it, so a reviewer sees it at the top of the file.
 - A provider class and its page in `docs/providers/` change together, the page says
   what the class does, what to set in the product, and which quirk each tweak answers.
+  A fix every site of one product needs belongs in its provider class, not in custom
+  library settings.
 - Strings live in `lang/en` in alphabetical order.
 - Wording: the remote side is an "identity provider account", the local side is a "user",
   and "user account" only where the text is about creating, suspending or switching the
@@ -112,6 +114,21 @@ They must be run from the project directory, because PHP is detected based on mp
 
 A new web service or capability needs a `version.php` bump before a site picks it up. On
 the development site call `external_update_descriptions()` and `update_capabilities()`.
+
+## Tests against real servers
+
+`tests/classes/keycloak_client.php` drives a real Keycloak over the admin API, so the
+PHPUnit and Behat tests need two constants in `config.php`:
+
+```php
+define('TEST_AUTH_MUSAML_KEYCLOAK_URL', 'https://keycloak.example.com');
+define('TEST_AUTH_MUSAML_KEYCLOAK_PASSWORD', '<password of the master realm admin>');
+```
+
+Every test site gets its own realm named after the database name and prefix, with one
+client and one user in it, so parallel sites never collide. Without the constants the
+tests are skipped. The Behat feature is tagged `@auth_musaml_keycloak` and covers a login
+and a single logout, which Keycloak accepts and Zitadel does not.
 
 ## External libraries
 

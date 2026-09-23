@@ -73,16 +73,11 @@ final class user_upload_source extends \tool_mulib\local\ajax_form {
         }
 
         // Only a check, the page stores what the import needs.
-        $stored = json_decode($content, true);
-        if (is_array($stored) && isset($stored['rows'])) {
-            $rows = is_array($stored['rows']) ? $stored['rows'] : [];
-        } else {
-            try {
-                $rows = mapping_import::parse($content, $data['encoding'], $data['delimiter_name']);
-            } catch (coding_exception $e) {
-                $errors['sourcefile'] = $e->getMessage();
-                return $errors;
-            }
+        try {
+            $rows = mapping_import::parse($content, $data['encoding'], $data['delimiter_name']);
+        } catch (coding_exception $e) {
+            $errors['sourcefile'] = $e->getMessage();
+            return $errors;
         }
 
         if ($errorcode = mapping_import::check_rows($rows)) {

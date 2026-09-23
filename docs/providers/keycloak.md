@@ -34,18 +34,3 @@ provider metadata, Keycloak encrypts assertions with RSA-OAEP and SHA-256, which
 neither php-saml nor SimpleSAMLphp can decrypt. Either turn client encryption off, or
 set the client to `rsa-oaep-mgf1p`, digest `SHA-1` and mask generation `MGF1-SHA1`.
 auth_saml2 fails the same way, this is not specific to this plugin.
-
-## Tests
-
-`tests/keycloak_client.php` drives a real instance over the admin API, so the PHPUnit and
-Behat tests need two constants in `config.php`:
-
-```php
-define('TEST_AUTH_MUSAML_KEYCLOAK_URL', 'https://keycloak.example.com');
-define('TEST_AUTH_MUSAML_KEYCLOAK_PASSWORD', '<password of the master realm admin>');
-```
-
-Every test site gets its own realm named after the database name and prefix, with one
-client and one user in it, so parallel sites never collide. Without the constants the
-tests are skipped. The Behat feature is tagged `@auth_musaml_keycloak` and covers a login
-and a single logout, which Keycloak accepts and Zitadel does not.

@@ -20,8 +20,7 @@ Metadata URL: `https://<host>/saml/v2/metadata`
 ## Quirks
 
 **Logout is refused.** Zitadel answers a logout request with `RequestDenied`, so a
-Moodle logout ends the Moodle session only. The class says so through `supports_slo()`
-and the plugin does not try.
+Moodle logout ends the Moodle session only.
 
 **Attributes are fixed.** Zitadel sends `UserID`, `UserName`, `Email`, `FirstName`,
 `SurName` and `FullName`, there is nothing to configure.
