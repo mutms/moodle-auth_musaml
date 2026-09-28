@@ -15,14 +15,16 @@ Feature: SAML identity provider management
     And I am on the "auth_musaml > Identity providers" page
     And I should see "No identity providers have been added yet"
     When I press "Add identity provider"
-    And I set the field "Metadata URL or XML" to the auth_musaml fixture "zitadel_metadata.xml" URL
-    And I click on "Continue" "button" in the ".modal-dialog" "css_element"
-    Then I should see "https://zitadel.example.com/saml/v2/metadata" in the ".modal-dialog" "css_element"
-    And the field "Provider" matches value "Zitadel"
-    And the field "Name" matches value "Zitadel"
-    And the field "User ID attribute" matches value "UserID"
-    When I set the field "Name" to "Company login"
-    And I click on "Add identity provider" "button" in the ".modal-dialog" "css_element"
+    And I set the muform field "metadatasource" to the auth_musaml fixture "zitadel_metadata.xml" URL
+    And I click on "Continue" "button" in the "dialog[open]" "css_element"
+    Then I should see "https://zitadel.example.com/saml/v2/metadata" in the "dialog[open]" "css_element"
+    And the following muform fields in the "dialog[open]" "css_element" match:
+      | provider | Zitadel |
+      | name     | Zitadel |
+      | mapattr  | UserID  |
+    When I set the following muform fields in the "dialog[open]" "css_element":
+      | name | Company login |
+    And I click on "Add identity provider" "button" in the "dialog[open]" "css_element"
     Then I should see "Company login"
     And I should see "Zitadel"
     And I should see "https://zitadel.example.com/saml/v2/SSO"
@@ -37,11 +39,17 @@ Feature: SAML identity provider management
     Given I log in as "admin"
     And I am on the "auth_musaml > Identity providers" page
     When I press "Add identity provider"
+    # Text that is not XML is an error of the field, never a broken page.
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | metadatasource | random text |
+    And I click on "Continue" "button" in the "dialog[open]" "css_element"
+    Then I should see "Metadata cannot be parsed" in the "dialog[open] [data-muform-name='metadatasource'] .invalid-feedback" "css_element"
     # Google and others offer a file download and no metadata URL.
-    And I set the field "Metadata URL or XML" to the auth_musaml fixture "zitadel_metadata.xml" XML
-    And I click on "Continue" "button" in the ".modal-dialog" "css_element"
-    And I set the field "Name" to "Pasted login"
-    And I click on "Add identity provider" "button" in the ".modal-dialog" "css_element"
+    And I set the muform field "metadatasource" to the auth_musaml fixture "zitadel_metadata.xml" XML
+    And I click on "Continue" "button" in the "dialog[open]" "css_element"
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | name | Pasted login |
+    And I click on "Add identity provider" "button" in the "dialog[open]" "css_element"
     Then I should see "Pasted login"
     And I should see "Pasted XML, not refreshed automatically"
     And I should see "https://zitadel.example.com/saml/v2/SSO"
@@ -54,17 +62,17 @@ Feature: SAML identity provider management
     When I am on the "Old IDP" "auth_musaml > idp" page
     Then I should see "Old IDP"
     When I press "Update identity provider"
-    And I set the following fields to these values:
-      | Name                    | New IDP                                  |
-      | Enabled                 | 1                                        |
-      | Custom library settings | {"security": {"wantAssertionsSigned": false}} |
-    And I click on "Update identity provider" "button" in the ".modal-dialog" "css_element"
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | name               | New IDP                                       |
+      | enabled            | 1                                             |
+      | customsettingsjson | {"security": {"wantAssertionsSigned": false}} |
+    And I click on "Update identity provider" "button" in the "dialog[open]" "css_element"
     Then I should see "New IDP"
     And I should see "Less strict than the plugin defaults"
     And I should see "security.wantAssertionsSigned = false"
     When I click on "Actions" "button"
     And I click on "Delete identity provider" "link"
-    And I click on "Delete identity provider" "button" in the ".modal-dialog" "css_element"
+    And I click on "Delete identity provider" "button" in the "dialog[open]" "css_element"
     Then I should see "No identity providers have been added yet"
 
   @tool_mutenancy
@@ -89,7 +97,7 @@ Feature: SAML identity provider management
     Then the "email" "field" should be disabled
     And the "firstname" "field" should be disabled
     And the "city" "field" should be enabled
-    And I click on "Cancel" "button" in the ".modal-dialog" "css_element"
+    And I press "Cancel"
     When I open the action menu in "Man Ual" "table_row"
     And I choose "Edit" in the open action menu
     Then the "email" "field" should be enabled
@@ -102,39 +110,41 @@ Feature: SAML identity provider management
     When I am on the "Some IDP" "auth_musaml > idp attributes" page
     Then I should see "No attributes are mapped yet"
     When I press "Add attribute"
-    And I set the following fields to these values:
-      | User field   | Email address |
-      | IDP attribute | Email        |
-      | Sync          | On every login |
-      | Used for automatic mapping | 1 |
-    And I click on "Add attribute" "button" in the ".modal-dialog" "css_element"
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | userfield   | Email address  |
+      | idpattr     | Email          |
+      | sync        | On every login |
+      | usermapping | 1              |
+    And I click on "Add attribute" "button" in the "dialog[open]" "css_element"
     Then I should see "Email address"
     And I should see "On every login"
     # The same user field cannot be mapped twice for one identity provider.
     When I press "Add attribute"
-    And I set the following fields to these values:
-      | User field    | Email address |
-      | IDP attribute | Mail          |
-    And I click on "Add attribute" "button" in the ".modal-dialog" "css_element"
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | userfield | Email address |
+      | idpattr   | Mail          |
+    And I click on "Add attribute" "button" in the "dialog[open]" "css_element"
     Then I should see "This user field is already mapped"
-    And I click on "Cancel" "button" in the ".modal-dialog" "css_element"
+    And I click on "Cancel" "button" in the "dialog[open]" "css_element"
     # Username may only be copied when the user account is created.
     When I press "Add attribute"
-    And I set the following fields to these values:
-      | User field    | Username       |
-      | IDP attribute | UserName       |
-      | Sync          | On every login |
-    And I click on "Add attribute" "button" in the ".modal-dialog" "css_element"
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | userfield | Username       |
+      | idpattr   | UserName       |
+      | sync      | On every login |
+    And I click on "Add attribute" "button" in the "dialog[open]" "css_element"
     Then I should see "username can only be copied when the user account is created"
-    And I set the field "Sync" to "On account creation"
-    And I click on "Add attribute" "button" in the ".modal-dialog" "css_element"
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | sync | On account creation |
+    And I click on "Add attribute" "button" in the "dialog[open]" "css_element"
     Then I should see "Username"
     When I click on "Update attribute" "link" in the "Email address" "table_row"
-    And I set the field "IDP attribute" to "PrimaryMail"
-    And I click on "Update attribute" "button" in the ".modal-dialog" "css_element"
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | idpattr | PrimaryMail |
+    And I click on "Update attribute" "button" in the "dialog[open]" "css_element"
     Then I should see "PrimaryMail"
     When I click on "Delete attribute" "link" in the "PrimaryMail" "table_row"
-    And I click on "Delete attribute" "button" in the ".modal-dialog" "css_element"
+    And I click on "Delete attribute" "button" in the "dialog[open]" "css_element"
     Then I should not see "PrimaryMail"
     And I should see "Username"
 
@@ -153,12 +163,14 @@ Feature: SAML identity provider management
     When I am on the "Some IDP" "auth_musaml > idp mappings" page
     Then I should see "Al Ready"
     When I press "Add user mapping"
-    And I set the field "User" to "mapme@example.com"
-    And I set the field "Identity provider account ID" to "guid-1"
-    And I click on "Add user mapping" "button" in the ".modal-dialog" "css_element"
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | userid | mapme@example.com |
+      | guid   | guid-1 |
+    And I click on "Add user mapping" "button" in the "dialog[open]" "css_element"
     Then I should see "already mapped to another user"
-    When I set the field "Identity provider account ID" to "guid-2"
-    And I click on "Add user mapping" "button" in the ".modal-dialog" "css_element"
+    When I set the following muform fields in the "dialog[open]" "css_element":
+      | guid | guid-2 |
+    And I click on "Add user mapping" "button" in the "dialog[open]" "css_element"
     Then I should see "Map Me"
     And I should see "guid-2"
     # The account was switched to SAML authentication by default.
@@ -166,12 +178,13 @@ Feature: SAML identity provider management
     Then I should see "SAML authentication"
     When I am on the "Some IDP" "auth_musaml > idp mappings" page
     And I click on "Update user mapping" "link" in the "Map Me" "table_row"
-    And I set the field "Identity provider account ID" to "guid-3"
-    And I set the field "Other auth allowed" to "1"
-    And I click on "Update user mapping" "button" in the ".modal-dialog" "css_element"
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | guid           | guid-3 |
+      | allowotherauth | 1      |
+    And I click on "Update user mapping" "button" in the "dialog[open]" "css_element"
     Then I should see "guid-3"
     When I click on "Delete user mapping" "link" in the "Map Me" "table_row"
-    And I click on "Delete user mapping" "button" in the ".modal-dialog" "css_element"
+    And I click on "Delete user mapping" "button" in the "dialog[open]" "css_element"
     Then I should not see "Map Me"
     And I should see "Al Ready"
 
@@ -187,30 +200,32 @@ Feature: SAML identity provider management
     And I am on the "Some IDP" "auth_musaml > idp mappings" page
     When I click on "Actions" "button"
     And I click on "Import user mappings" "link"
-    And I set the field "Or paste CSV data" to multiline:
-    """
-    guid,email
-    z-1,one@example.com
-    z-2,two@example.com
-    z-3,nobody@example.com
-    """
+    And I set the following muform fields:
+      | csvtext | guid,email\nz-1,one@example.com\nz-2,two@example.com\nz-3,nobody@example.com |
     And I press "Continue"
     # The column meaning and the header line are guessed from the first row.
     Then I should see "4 rows were read"
-    And the field "First line holds column names" matches value "1"
+    And the following muform fields match:
+      | headers | 1 |
     And I press "Continue"
     # The options page previews what the import would do right now.
     Then I should see "Import options"
     And I should see "Ready to import: 2"
     And I should see "Skipped: 1"
-    When I set the following fields to these values:
-      | Skip rows without a matching user | 0 |
+    When I set the following muform fields:
+      | skipmissing | 0 |
     And I press "Refresh preview"
     # A row without a user stops the import until it is skipped.
     Then I should see "No user matches"
     And I should see "Problems: 1"
-    When I set the following fields to these values:
-      | Skip rows without a matching user | 1 |
+    And "Import mappings" "button" should not exist
+    # Going back keeps the answers and the options have to be confirmed again.
+    When I press "Back"
+    Then the following muform fields match:
+      | headers | 1 |
+    When I press "Continue"
+    And I set the following muform fields:
+      | skipmissing | 1 |
     And I press "Refresh preview"
     Then I should see "Ready to import: 2"
     And I press "Import mappings"
@@ -222,7 +237,7 @@ Feature: SAML identity provider management
     When I am on the "two" "user > editing" page
     Then I should see "SAML authentication"
 
-  @_file_upload
+  @javascript @_file_upload
   Scenario: Data without a header line is imported as it is
     Given the following "auth_musaml > idps" exist:
       | name     | mapattr |
@@ -235,21 +250,22 @@ Feature: SAML identity provider management
     And I am on the "Some IDP" "auth_musaml > idp mappings" page
     When I click on "Actions" "button"
     And I click on "Import user mappings" "link"
-    And I upload "auth/musaml/tests/fixtures/user_mappings_noheader.csv" file to "Source file" filemanager
+    And I upload "auth/musaml/tests/fixtures/user_mappings_noheader.csv" file to "sourcefile" muform filemanager
     And I press "Continue"
     # Nothing names the columns, so the first line is data and has to be described by hand.
     Then I should see "2 rows were read"
-    And the field "First line holds column names" matches value "0"
+    And the following muform fields match:
+      | headers | 0 |
     And I should see "one@example.com"
-    When I set the following fields to these values:
-      | Column 1 | Identity provider account ID |
-      | Column 2 | Email address                |
+    When I set the following muform fields:
+      | column_0 | Identity provider account ID |
+      | column_1 | Email address                |
     And I press "Continue"
     Then I should see "Ready to import: 2"
     And I press "Import mappings"
     Then I should see "Imported 2 user mappings, skipped 0"
 
-  @_file_upload
+  @javascript @_file_upload
   Scenario: Tab separated data is recognised and imported
     Given the following "auth_musaml > idps" exist:
       | name     | mapattr |
@@ -262,13 +278,13 @@ Feature: SAML identity provider management
     When I click on "Actions" "button"
     And I click on "Import user mappings" "link"
     # A spreadsheet saves and copies its columns separated by tabs.
-    And I upload "auth/musaml/tests/fixtures/user_mappings_tabs.csv" file to "Source file" filemanager
+    And I upload "auth/musaml/tests/fixtures/user_mappings_tabs.csv" file to "sourcefile" muform filemanager
     And I press "Continue"
     # The separator is detected, nobody has to know a spreadsheet uses tabs.
     Then I should see "2 rows were read"
     And I should see "one@example.com"
 
-  @_file_upload
+  @javascript @_file_upload
   Scenario: Admin imports user mappings from an uploaded CSV file
     Given the following "auth_musaml > idps" exist:
       | name     | mapattr |
@@ -281,7 +297,7 @@ Feature: SAML identity provider management
     And I am on the "Some IDP" "auth_musaml > idp mappings" page
     When I click on "Actions" "button"
     And I click on "Import user mappings" "link"
-    And I upload "auth/musaml/tests/fixtures/user_mappings.csv" file to "Source file" filemanager
+    And I upload "auth/musaml/tests/fixtures/user_mappings.csv" file to "sourcefile" muform filemanager
     And I press "Continue"
     Then I should see "4 rows were read"
     And I press "Continue"
@@ -302,12 +318,14 @@ Feature: SAML identity provider management
     And I should see "From metadata"
     When I click on "Actions" "button"
     And I click on "Certificate settings" "link"
-    And I set the field "Additional signing certificates" to "this is not a certificate"
-    And I click on "Save changes" "button" in the ".modal-dialog" "css_element"
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | extracerts | this is not a certificate |
+    And I click on "Save changes" "button" in the "dialog[open]" "css_element"
     Then I should see "does not contain valid certificates"
-    When I set the field "Refresh metadata automatically" to "0"
-    And I set the field "Additional signing certificates" to ""
-    And I click on "Save changes" "button" in the ".modal-dialog" "css_element"
+    When I set the following muform fields in the "dialog[open]" "css_element":
+      | autorefresh | 0 |
+      | extracerts  |   |
+    And I click on "Save changes" "button" in the "dialog[open]" "css_element"
     Then I should see "Refresh metadata automatically"
     And I should see "No"
 
@@ -336,13 +354,14 @@ Feature: SAML identity provider management
     # The identity provider settings stay out of reach.
     And I should not see "Update identity provider"
     When I press "Add user mapping"
-    And I set the field "User" to "target@example.com"
-    And I set the field "Identity provider account ID" to "guid-1"
-    And I click on "Add user mapping" "button" in the ".modal-dialog" "css_element"
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | userid | target@example.com |
+      | guid   | guid-1 |
+    And I click on "Add user mapping" "button" in the "dialog[open]" "css_element"
     Then I should see "Tar Get"
     And I should see "guid-1"
     When I click on "Delete user mapping" "link" in the "Tar Get" "table_row"
-    And I click on "Delete user mapping" "button" in the ".modal-dialog" "css_element"
+    And I click on "Delete user mapping" "button" in the "dialog[open]" "css_element"
     Then I should see "No users are mapped yet"
 
   Scenario: Identity provider and mapping changes reach the site logs
@@ -355,12 +374,13 @@ Feature: SAML identity provider management
     And I log in as "admin"
     And I am on the "Some IDP" "auth_musaml > idp mappings" page
     When I press "Add user mapping"
-    And I set the field "User" to "mapme@example.com"
-    And I set the field "Identity provider account ID" to "guid-1"
-    And I click on "Add user mapping" "button" in the ".modal-dialog" "css_element"
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | userid | mapme@example.com |
+      | guid   | guid-1 |
+    And I click on "Add user mapping" "button" in the "dialog[open]" "css_element"
     Then I should see "Map Me"
     When I click on "Delete user mapping" "link" in the "Map Me" "table_row"
-    And I click on "Delete user mapping" "button" in the ".modal-dialog" "css_element"
+    And I click on "Delete user mapping" "button" in the "dialog[open]" "css_element"
     Then I should see "No users are mapped yet"
     # Both changes are in the standard log, where an administrator looks first.
     When I am on site homepage
@@ -376,6 +396,42 @@ Feature: SAML identity provider management
     And I log in as "admin"
     And I am on the "Some IDP" "auth_musaml > idp" page
     When I press "Update identity provider"
-    And I set the field "Custom library settings" to "[1, 2]"
-    And I click on "Update identity provider" "button" in the ".modal-dialog" "css_element"
-    Then I should see "Custom settings must be a JSON object" in the ".modal-dialog" "css_element"
+    And I set the following muform fields in the "dialog[open]" "css_element":
+      | customsettingsjson | [1, 2] |
+    And I click on "Update identity provider" "button" in the "dialog[open]" "css_element"
+    Then I should see "Custom settings must be a JSON object" in the "dialog[open]" "css_element"
+
+  Scenario: Admin regenerates and deletes the service provider certificate
+    Given I log in as "admin"
+    When I visit "/auth/musaml/management/sp.php"
+    And I press "Regenerate certificate"
+    Then I should see "Entity ID" in the "dialog[open]" "css_element"
+    When I set the following muform fields in the "dialog[open]" "css_element":
+      | commonname | Test SP |
+      | days       | 0       |
+    And I click on "Regenerate certificate" "button" in the "dialog[open]" "css_element"
+    Then I should see "Error" in the "dialog[open] [data-muform-name='days'] .invalid-feedback" "css_element"
+    When I set the following muform fields in the "dialog[open]" "css_element":
+      | days | 30 |
+    And I click on "Regenerate certificate" "button" in the "dialog[open]" "css_element"
+    Then I should see "CN=Test SP"
+    When I press "Delete certificate"
+    And I click on "Delete certificate" "button" in the "dialog[open]" "css_element"
+    Then I should see "Generate certificate"
+    When I press "Generate certificate"
+    And I click on "Generate certificate" "button" in the "dialog[open]" "css_element"
+    Then I should see "Certificate subject"
+
+  Scenario: Admin refreshes the metadata of an identity provider
+    Given the following "auth_musaml > idps" exist:
+      | name     | mapattr |
+      | Some IDP | UserID  |
+    And I log in as "admin"
+    When I am on the "Some IDP" "auth_musaml > idp" page
+    And I click on "Actions" "button"
+    And I click on "Refresh metadata" "link"
+    Then I should see "Metadata URL" in the "dialog[open]" "css_element"
+    When I click on "Refresh metadata" "button" in the "dialog[open]" "css_element"
+    # The generated identity provider points to a host that does not exist.
+    Then I should see "Last refresh failed"
+    And I should see "Some IDP"

@@ -18,6 +18,14 @@
 
 namespace auth_musaml\local\form;
 
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\hidden;
+use tool_mulib\muform\element\info;
+use tool_mulib\muform\element\inforawhtml;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\form;
+
 /**
  * Delete user mapping confirmation form.
  *
@@ -25,23 +33,20 @@ namespace auth_musaml\local\form;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class user_delete extends \tool_mulib\local\ajax_form {
+final class user_delete extends form {
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
-        $mapping = $this->_customdata['mapping'];
-        $user = $this->_customdata['user'];
+        $user = $this->get_extra_data()['user'];
 
-        $info = '<div class="alert alert-warning">' . get_string('user_mapping_delete_info', 'auth_musaml') . '</div>';
-        $mform->addElement('html', $info);
-        $userlabel = fullname($user) . ' (' . s($user->username) . ')';
-        $mform->addElement('static', 'staticuser', get_string('user_mapping_user', 'auth_musaml'), $userlabel);
-        $mform->addElement('static', 'staticguid', get_string('user_mapping_guid', 'auth_musaml'), s($mapping->guid));
+        $info = '<div class="alert alert-warning">' . s(get_string('user_mapping_delete_info', 'auth_musaml')) . '</div>';
+        $this->add(new inforawhtml('deleteinfo', '', $info));
+        $userlabel = fullname($user) . ' (' . $user->username . ')';
+        $this->add(new info('user', get_string('user_mapping_user', 'auth_musaml'), $userlabel));
+        $this->add(new info('guid', get_string('user_mapping_guid', 'auth_musaml'), info::PLAIN));
+        $this->add(new hidden('id'));
 
-        $mform->addElement('hidden', 'id');
-        $mform->setType('id', PARAM_INT);
-        $mform->setConstant('id', $mapping->id);
-
-        $this->add_action_buttons(true, get_string('user_mapping_delete', 'auth_musaml'));
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string('user_mapping_delete', 'auth_musaml')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 }

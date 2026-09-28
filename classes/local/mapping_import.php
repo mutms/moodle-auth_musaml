@@ -24,17 +24,15 @@ use stdClass;
 /**
  * Bulk import of user mappings from CSV data.
  *
- * The wizard parses the uploaded or pasted text once and keeps the rows as a JSON
- * file in the user file area, so later stages only carry the draft item id.
+ * The wizard parses the uploaded or pasted text once, the page keeps the rows, the column
+ * meanings and the options in the muform wizard state; this class only validates and
+ * transforms that data and runs the import.
  *
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class mapping_import {
-    /** @var string name of the stored file */
-    public const FILENAME = 'csvdata.json';
-
     /** @var string csv_import_reader type */
     public const CSVTYPE = 'auth_musaml_user';
 
@@ -43,9 +41,6 @@ final class mapping_import {
 
     /** @var int rows of the data preview shown with the column meanings */
     public const DATA_PREVIEW_ROWS = 4;
-
-    /** @var int stored data is ignored after this many seconds */
-    public const DATA_TTL = DAYSECS;
 
     /** @var string column is not used */
     public const COLUMN_IGNORE = '';
@@ -94,41 +89,6 @@ final class mapping_import {
             'skipguidused' => get_string('import_skip_guidused', 'auth_musaml'),
             'skipinvalid' => get_string('import_skip_invalid', 'auth_musaml'),
         ];
-    }
-
-    /**
-     * State of an unfinished import.
-     *
-     * The shape never changes, a missing or unusable section comes back empty, so the
-     * callers only ask which stage is due.
-     *
-     * @param int $draftid
-     * @return stdClass keys: rows, columns, options
-     */
-    public static function get_data(int $draftid): stdClass {
-        global $USER;
-
-        $csvdata = (object)['rows' => [], 'columns' => [], 'options' => []];
-        if (!$draftid) {
-            return $csvdata;
-        }
-
-        $fs = get_file_storage();
-        $context = \core\context\user::instance($USER->id);
-        $file = $fs->get_file($context->id, 'user', 'draft', $draftid, '/', self::FILENAME);
-        if (!$file) {
-            return $csvdata;
-        }
-        if ($file->get_timecreated() < time() - self::DATA_TTL) {
-            self::delete_data($draftid);
-            return $csvdata;
-        }
-
-        $stored = json_decode($file->get_content(), true);
-        if (!is_array($stored)) {
-            return $csvdata;
-        }
-        return self::validate($stored);
     }
 
     /**
@@ -336,21 +296,40 @@ final class mapping_import {
     }
 
     /**
-     * Store the data of the source stage, pasted or uploaded CSV.
+     * Data of the source stage, pasted or uploaded CSV, the later stages start over.
      *
-     * @param stdClass $formdata data of the source form
+     * @param string $content CSV text
+     * @param string $encoding
+     * @param string $delimitername separator name, or "auto" to detect it
      * @return stdClass keys: rows, columns, options
      */
-    public static function save_source(stdClass $formdata): stdClass {
-        $draftid = (int)$formdata->sourcefile;
-        $content = self::get_source_content($formdata);
-        $rows = self::parse($content, $formdata->encoding, $formdata->delimiter_name);
-
-        return self::store_data($draftid, self::validate(['rows' => $rows]));
+    public static function save_source(string $content, string $encoding, string $delimitername): stdClass {
+        $rows = self::parse($content, $encoding, $delimitername);
+        return self::validate(['rows' => $rows]);
     }
 
     /**
-     * Store the import options, the wizard has nothing left to ask afterwards.
+     * Add the meaning of each column, the options have to be confirmed again.
+     *
+     * @param stdClass $csvdata
+     * @param stdClass $formdata data of the columns form
+     * @return stdClass keys: rows, columns, options
+     */
+    public static function save_columns(stdClass $csvdata, stdClass $formdata): stdClass {
+        $map = [];
+        foreach ($csvdata->rows[0] as $index => $unused) {
+            $map[$index] = $formdata->{'column_' . $index} ?? self::COLUMN_IGNORE;
+        }
+        $csvdata->columns = ['headers' => !empty($formdata->headers), 'map' => $map];
+        if ($csvdata->options) {
+            // The chosen options stay as defaults, the dry run has to be seen again.
+            $csvdata->options['preview'] = true;
+        }
+        return $csvdata;
+    }
+
+    /**
+     * Add the confirmed import options, the wizard has nothing left to ask afterwards.
      *
      * @param stdClass $csvdata
      * @param stdClass $formdata data of the options form
@@ -363,95 +342,7 @@ final class mapping_import {
         }
         $options['preview'] = false;
         $csvdata->options = $options;
-
-        return self::store_data((int)$formdata->sourcefile, $csvdata);
-    }
-
-    /**
-     * Store the meaning of each column.
-     *
-     * @param stdClass $csvdata
-     * @param stdClass $formdata data of the columns form
-     * @return stdClass keys: rows, columns, options
-     */
-    public static function save_columns(stdClass $csvdata, stdClass $formdata): stdClass {
-        $map = [];
-        foreach ($csvdata->rows[0] as $index => $unused) {
-            $map[$index] = $formdata->{'column_' . $index} ?? self::COLUMN_IGNORE;
-        }
-        $csvdata->columns = ['headers' => !empty($formdata->headers), 'map' => $map];
-
-        return self::store_data((int)$formdata->sourcefile, $csvdata);
-    }
-
-    /**
-     * CSV text or uploaded file content of the source form.
-     *
-     * @param stdClass $formdata data of the source form
-     * @return string
-     */
-    public static function get_source_content(stdClass $formdata): string {
-        global $USER;
-
-        $draftid = (int)$formdata->sourcefile;
-        if ($draftid) {
-            $fs = get_file_storage();
-            $context = \core\context\user::instance($USER->id);
-            foreach ($fs->get_area_files($context->id, 'user', 'draft', $draftid, 'id DESC', false) as $file) {
-                if ($file->get_filename() !== self::FILENAME) {
-                    return trim($file->get_content());
-                }
-            }
-        }
-
-        return trim((string)($formdata->csvtext ?? ''));
-    }
-
-    /**
-     * Write the document, the uploaded file is replaced by it.
-     *
-     * The draft area of the upload form is used, so an abandoned import is swept by the
-     * core draft cleanup.
-     *
-     * @param int $draftid
-     * @param stdClass $csvdata
-     * @return stdClass the stored document
-     */
-    private static function store_data(int $draftid, stdClass $csvdata): stdClass {
-        global $USER;
-
-        $fs = get_file_storage();
-        $context = \core\context\user::instance($USER->id);
-        $fs->delete_area_files($context->id, 'user', 'draft', $draftid);
-
-        $record = [
-            'contextid' => $context->id,
-            'component' => 'user',
-            'filearea' => 'draft',
-            'itemid' => $draftid,
-            'filepath' => '/',
-            'filename' => self::FILENAME,
-        ];
-        $content = json_encode($csvdata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        $fs->create_file_from_string($record, $content);
-
         return $csvdata;
-    }
-
-    /**
-     * Forget an unfinished import.
-     *
-     * @param int $draftid
-     */
-    public static function delete_data(int $draftid): void {
-        global $USER;
-
-        if (!$draftid) {
-            return;
-        }
-        $fs = get_file_storage();
-        $context = \core\context\user::instance($USER->id);
-        $fs->delete_area_files($context->id, 'user', 'draft', $draftid);
     }
 
     /**

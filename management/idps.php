@@ -29,7 +29,7 @@ use auth_musaml\local\provider\base as provider;
 use auth_musaml\local\saml;
 use auth_musaml\output\sp_urls;
 use core\output\html_writer;
-use tool_mulib\output\ajax_form\button;
+use tool_mulib\output\muform\dialog\button;
 use tool_mulib\output\entity_details;
 use tool_mulib\output\header_actions;
 
@@ -55,8 +55,8 @@ $actions = new header_actions(get_string('actions'));
 if (saml::has_sp_certificate()) {
     $url = new \core\url('/auth/musaml/management/idp_create.php');
     $button = new button($url, get_string('idp_create', 'auth_musaml'), true);
-    $button->set_submitted_action($button::SUBMITTED_ACTION_REDIRECT);
-    $button->set_form_size('lg');
+    $button->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_REDIRECT);
+    $button->set_form_size('xl');
     $actions->add_button($button);
 }
 

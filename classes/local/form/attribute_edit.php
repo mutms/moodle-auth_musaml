@@ -21,6 +21,15 @@ namespace auth_musaml\local\form;
 use auth_musaml\local\attribute;
 use auth_musaml\local\idp;
 use auth_musaml\local\userfield;
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\checkbox;
+use tool_mulib\muform\element\hidden;
+use tool_mulib\muform\element\inforawhtml;
+use tool_mulib\muform\element\select;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\element\text;
+use tool_mulib\muform\form;
 
 /**
  * Create and update form for attribute mappings.
@@ -29,75 +38,67 @@ use auth_musaml\local\userfield;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class attribute_edit extends \tool_mulib\local\ajax_form {
+final class attribute_edit extends form {
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
-        $idp = $this->_customdata['idp'];
-        $attribute = $this->_customdata['attribute'] ?? null;
+        $extra = $this->get_extra_data();
+        $idp = $extra['idp'];
+        $isupdate = array_key_exists('id', $this->get_current_data());
 
-        $mform->addElement('hidden', 'idpid');
-        $mform->setType('idpid', PARAM_INT);
-        $mform->setConstant('idpid', $idp->id);
-
-        if ($attribute) {
-            $mform->addElement('hidden', 'id');
-            $mform->setType('id', PARAM_INT);
-            $mform->setConstant('id', $attribute->id);
+        $this->add(new hidden('idpid'));
+        if ($isupdate) {
+            $this->add(new hidden('id'));
         }
 
         // Without a placeholder the first field looks preselected and everything becomes a username.
         $menu = ['' => get_string('choosedots')] + userfield::get_menu();
-        $mform->addElement('select', 'userfield', get_string('attribute_userfield', 'auth_musaml'), $menu);
-        $mform->addRule('userfield', null, 'required', null, 'client');
-        $mform->addHelpButton('userfield', 'attribute_userfield', 'auth_musaml');
+        $userfield = (new select('userfield', get_string('attribute_userfield', 'auth_musaml'), $menu))
+            ->set_required(true)
+            ->add_help_button('attribute_userfield', 'auth_musaml');
+        $this->add($userfield);
 
-        $mform->addElement('text', 'idpattr', get_string('attribute_idpattr', 'auth_musaml'), 'size="50"');
-        $mform->setType('idpattr', PARAM_RAW_TRIMMED);
-        if (!$attribute && !empty($this->_customdata['idpattr'])) {
-            $mform->setDefault('idpattr', $this->_customdata['idpattr']);
+        $idpattr = (new text('idpattr', get_string('attribute_idpattr', 'auth_musaml'), ['type' => 'rawtext', 'width' => 'medium']))
+            ->set_required(true)
+            ->add_help_button('attribute_idpattr', 'auth_musaml');
+        if (!$isupdate && !empty($extra['idpattr'])) {
+            $idpattr->set_default($extra['idpattr']);
         }
-        $mform->addRule('idpattr', null, 'required', null, 'client');
-        $mform->addHelpButton('idpattr', 'attribute_idpattr', 'auth_musaml');
+        $this->add($idpattr);
 
         $advertised = idp::get_certinfo($idp)['attributes'];
         if ($advertised) {
-            $hint = get_string('attribute_advertised', 'auth_musaml', s(implode(', ', $advertised)));
-            $mform->addElement('static', 'advertised', '', $hint);
+            $hint = get_string('attribute_advertised', 'auth_musaml', implode(', ', $advertised));
+            $this->add(new inforawhtml('advertised', '', s($hint)));
         }
 
-        $mform->addElement('select', 'sync', get_string('attribute_sync', 'auth_musaml'), attribute::get_sync_menu());
-        $mform->setDefault('sync', attribute::SYNC_ONLOGIN);
-        $mform->addHelpButton('sync', 'attribute_sync', 'auth_musaml');
+        $sync = (new select('sync', get_string('attribute_sync', 'auth_musaml'), attribute::get_sync_menu()))
+            ->set_default(attribute::SYNC_ONLOGIN)
+            ->add_help_button('attribute_sync', 'auth_musaml');
+        $this->add($sync);
 
-        $mform->addElement('advcheckbox', 'usermapping', get_string('attribute_usermapping', 'auth_musaml'));
-        $mform->addHelpButton('usermapping', 'attribute_usermapping', 'auth_musaml');
+        $usermapping = (new checkbox('usermapping', get_string('attribute_usermapping', 'auth_musaml')))
+            ->add_help_button('attribute_usermapping', 'auth_musaml');
+        $this->add($usermapping);
 
-        if ($attribute) {
-            $this->set_data($attribute);
-        }
-        $label = $attribute ? 'attribute_update' : 'attribute_create';
-        $this->add_action_buttons(true, get_string($label, 'auth_musaml'));
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string($isupdate ? 'attribute_update' : 'attribute_create', 'auth_musaml')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 
     #[\Override]
-    public function validation($data, $files): array {
-        $errors = parent::validation($data, $files);
-        $idp = $this->_customdata['idp'];
-        $attribute = $this->_customdata['attribute'] ?? null;
+    protected function validation(array $data, array &$allerrors): void {
+        $idp = $this->get_extra_data()['idp'];
+        $attributeid = (int)($this->get_current_data()['id'] ?? 0);
 
-        if (trim($data['idpattr']) === '') {
-            $errors['idpattr'] = get_string('required');
+        if ($data['userfield'] !== null) {
+            if (!array_key_exists($data['userfield'], userfield::get_menu())) {
+                $allerrors['userfield'][] = get_string('required');
+            } else if (attribute::userfield_exists($idp->id, $data['userfield'], $attributeid)) {
+                $allerrors['userfield'][] = get_string('error_userfieldmapped', 'auth_musaml');
+            }
         }
-        if (!array_key_exists($data['userfield'], userfield::get_menu())) {
-            $errors['userfield'] = get_string('required');
-        } else if (attribute::userfield_exists($idp->id, $data['userfield'], $attribute->id ?? 0)) {
-            $errors['userfield'] = get_string('error_userfieldmapped', 'auth_musaml');
+        if ($data['userfield'] === 'username' && (int)$data['sync'] === attribute::SYNC_ONLOGIN) {
+            $allerrors['sync'][] = get_string('error_usernamesync', 'auth_musaml');
         }
-        $syncsonlogin = (int)$data['sync'] === attribute::SYNC_ONLOGIN;
-        if ($data['userfield'] === 'username' && $syncsonlogin) {
-            $errors['sync'] = get_string('error_usernamesync', 'auth_musaml');
-        }
-        return $errors;
     }
 }

@@ -27,31 +27,36 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use auth_musaml\local\form\sp_cert_regen;
 use auth_musaml\local\saml;
+use tool_mulib\muform\handler;
 
 // phpcs:disable moodle.Commenting.InlineComment.TypeHintingMatch
+/** @var core_renderer $OUTPUT */
 /** @var moodle_page $PAGE */
 // phpcs:enable moodle.Commenting.InlineComment.TypeHintingMatch
-
-define('AJAX_SCRIPT', true);
 
 require(__DIR__ . '/../../../config.php');
 
 require_login();
+
 $context = \core\context\system::instance();
 require_capability('moodle/site:config', $context);
 
-$PAGE->set_url('/auth/musaml/management/sp_cert_regen.php');
+$pageurl = new \core\url('/auth/musaml/management/sp_cert_regen.php', []);
+$PAGE->set_url($pageurl);
 $PAGE->set_context($context);
+
+$handler = handler::from_request();
 
 $returnurl = new \core\url('/auth/musaml/management/sp.php');
 
-$form = new \auth_musaml\local\form\sp_cert_regen(null, ['info' => saml::get_sp_certificate_info()]);
+$info = saml::get_sp_certificate_info();
+$form = new sp_cert_regen($pageurl, [], ['info' => $info]);
 
 if ($form->is_cancelled()) {
-    $form->ajax_form_cancelled($returnurl);
+    $handler->cancelled($returnurl);
 }
-
 if ($data = $form->get_data()) {
     $dn = saml::get_default_dn();
     $dn['commonName'] = $data->commonname;
@@ -60,7 +65,11 @@ if ($data = $form->get_data()) {
     // It is always stored, so it cannot follow a later wwwroot change.
     set_config('sp_entityid', trim((string)$data->entityid), 'auth_musaml');
     saml::regenerate_sp_certificate($dn, $data->days);
-    $form->ajax_form_submitted($returnurl);
+    $handler->submitted($returnurl);
 }
 
-$form->ajax_form_render();
+$title = get_string($info ? 'sp_cert_regen' : 'sp_cert_create', 'auth_musaml');
+$PAGE->set_pagelayout('admin');
+$PAGE->set_title($title);
+$PAGE->set_heading($title);
+$handler->render($form);

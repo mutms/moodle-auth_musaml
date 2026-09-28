@@ -21,6 +21,12 @@ namespace auth_musaml\local\form;
 use auth_musaml\local\idp;
 use auth_musaml\local\provider\base as provider;
 use core\exception\moodle_exception;
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\select;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\element\textarea;
+use tool_mulib\muform\form;
 
 /**
  * Create IDP, step one: metadata URL and provider.
@@ -31,41 +37,40 @@ use core\exception\moodle_exception;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class idp_create_metadata extends \tool_mulib\local\ajax_form {
+final class idp_create_metadata extends form {
     /** @var array|null parsed metadata after successful validation */
     private ?array $metadata = null;
 
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
-
-        $label = get_string('idp_metadatasource', 'auth_musaml');
-        $mform->addElement('textarea', 'metadatasource', $label, 'rows="3" cols="80"');
-        $mform->setType('metadatasource', PARAM_RAW);
-        $mform->addRule('metadatasource', null, 'required', null, 'client');
-        $mform->addHelpButton('metadatasource', 'idp_metadatasource', 'auth_musaml');
+        $sourcelabel = get_string('idp_metadatasource', 'auth_musaml');
+        $source = (new textarea('metadatasource', $sourcelabel, ['type' => 'rawtext', 'rows' => 3]))
+            ->set_required(true)
+            ->add_help_button('idp_metadatasource', 'auth_musaml');
+        $this->add($source);
 
         $menu = ['auto' => get_string('provider_auto', 'auth_musaml')] + provider::get_menu();
-        $mform->addElement('select', 'provider', get_string('idp_provider', 'auth_musaml'), $menu);
-        $mform->addHelpButton('provider', 'idp_provider', 'auth_musaml');
+        $provider = (new select('provider', get_string('idp_provider', 'auth_musaml'), $menu))
+            ->add_help_button('idp_provider', 'auth_musaml');
+        $this->add($provider);
 
-        $this->add_action_buttons(true, get_string('continue'));
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string('continue')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 
     #[\Override]
-    public function validation($data, $files): array {
-        $errors = parent::validation($data, $files);
+    protected function validation(array $data, array &$allerrors): void {
         try {
             $metadata = idp::load_metadata_source($data['metadatasource']);
             if (idp::fetch_by_entityid($metadata['entityid'])) {
-                $errors['metadatasource'] = get_string('error_entityidexists', 'auth_musaml', $metadata['entityid']);
+                $allerrors['metadatasource'][] = get_string('error_entityidexists', 'auth_musaml', $metadata['entityid']);
             } else {
                 $this->metadata = $metadata;
             }
         } catch (moodle_exception $e) {
-            $errors['metadatasource'] = $e->getMessage();
+            $allerrors['metadatasource'][] = $e->getMessage();
         }
-        return $errors;
     }
 
     /**

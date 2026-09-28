@@ -18,6 +18,14 @@
 
 namespace auth_musaml\local\form;
 
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\hidden;
+use tool_mulib\muform\element\info;
+use tool_mulib\muform\element\inforawhtml;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\form;
+
 /**
  * Delete attribute mapping confirmation form.
  *
@@ -25,23 +33,17 @@ namespace auth_musaml\local\form;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class attribute_delete extends \tool_mulib\local\ajax_form {
+final class attribute_delete extends form {
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
-        $attribute = $this->_customdata['attribute'];
+        $info = '<div class="alert alert-warning">' . s(get_string('attribute_delete_info', 'auth_musaml')) . '</div>';
+        $this->add(new inforawhtml('deleteinfo', '', $info));
+        $this->add(new info('userfield', get_string('attribute_userfield', 'auth_musaml'), info::PLAIN));
+        $this->add(new info('idpattr', get_string('attribute_idpattr', 'auth_musaml'), info::PLAIN));
+        $this->add(new hidden('id'));
 
-        $info = '<div class="alert alert-warning">' . get_string('attribute_delete_info', 'auth_musaml') . '</div>';
-        $mform->addElement('html', $info);
-        $userfieldlabel = get_string('attribute_userfield', 'auth_musaml');
-        $mform->addElement('static', 'staticuserfield', $userfieldlabel, s($attribute->userfield));
-        $idpattrlabel = get_string('attribute_idpattr', 'auth_musaml');
-        $mform->addElement('static', 'staticidpattr', $idpattrlabel, s($attribute->idpattr));
-
-        $mform->addElement('hidden', 'id');
-        $mform->setType('id', PARAM_INT);
-        $mform->setConstant('id', $attribute->id);
-
-        $this->add_action_buttons(true, get_string('attribute_delete', 'auth_musaml'));
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string('attribute_delete', 'auth_musaml')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 }

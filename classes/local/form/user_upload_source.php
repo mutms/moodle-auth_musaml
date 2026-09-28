@@ -20,6 +20,14 @@ namespace auth_musaml\local\form;
 
 use auth_musaml\local\mapping_import;
 use core\exception\coding_exception;
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\filemanager;
+use tool_mulib\muform\element\info;
+use tool_mulib\muform\element\select;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\element\textarea;
+use tool_mulib\muform\form;
 
 /**
  * Mapping import, stage one: where the CSV data comes from.
@@ -28,62 +36,59 @@ use core\exception\coding_exception;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class user_upload_source extends \tool_mulib\local\ajax_form {
+final class user_upload_source extends form {
     #[\Override]
     protected function definition(): void {
         global $CFG;
         require_once($CFG->libdir . '/csvlib.class.php');
 
-        $mform = $this->_form;
-        $idp = $this->_customdata['idp'];
+        $this->add(new info('info', '', get_string('import_source_info', 'auth_musaml')));
+        $this->add(new filemanager('sourcefile', get_string('import_file', 'auth_musaml'), 1, ['.csv', '.tsv', '.txt']));
+        $this->add(new textarea('csvtext', get_string('import_text', 'auth_musaml'), ['type' => 'rawtext', 'rows' => 8]));
 
-        // The form action carries no query string, so the page needs the id back.
-        $mform->addElement('hidden', 'id');
-        $mform->setType('id', PARAM_INT);
-        $mform->setConstant('id', $idp->id);
-
-        $mform->addElement('static', 'info', '', get_string('import_source_info', 'auth_musaml'));
-
-        $filetypes = ['accepted_types' => ['.csv', '.tsv', '.txt']];
-        $mform->addElement('filepicker', 'sourcefile', get_string('import_file', 'auth_musaml'), null, $filetypes);
-
-        $textareaoptions = ['rows' => 8, 'cols' => 70, 'class' => 'text-monospace'];
-        $mform->addElement('textarea', 'csvtext', get_string('import_text', 'auth_musaml'), $textareaoptions);
-        $mform->setType('csvtext', PARAM_RAW);
-
-        $mform->addElement('select', 'encoding', get_string('import_encoding', 'auth_musaml'), \core_text::get_encodings());
-        $mform->setDefault('encoding', 'UTF-8');
+        $encoding = (new select('encoding', get_string('import_encoding', 'auth_musaml'), \core_text::get_encodings()))
+            ->set_default('UTF-8');
+        $this->add($encoding);
 
         $delimiters = [mapping_import::DELIMITER_AUTO => get_string('import_delimiter_auto', 'auth_musaml')]
             + \csv_import_reader::get_delimiter_list();
-        $mform->addElement('select', 'delimiter_name', get_string('import_delimiter', 'auth_musaml'), $delimiters);
-        $mform->setDefault('delimiter_name', mapping_import::DELIMITER_AUTO);
+        $delimiter = (new select('delimiter_name', get_string('import_delimiter', 'auth_musaml'), $delimiters))
+            ->set_default(mapping_import::DELIMITER_AUTO);
+        $this->add($delimiter);
 
-        $this->add_action_buttons(true, get_string('continue'));
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string('continue')), 'buttons');
+        $this->add(new cancel(), 'buttons');
+    }
+
+    /**
+     * Uploaded file content or the pasted text, the file wins.
+     *
+     * @return string
+     */
+    public function get_source_content(): string {
+        foreach ($this->get_element('sourcefile')->get_files() as $file) {
+            return trim($file->get_content());
+        }
+        return trim((string)$this->get_element('csvtext')->get_value());
     }
 
     #[\Override]
-    public function validation($data, $files): array {
-        $errors = parent::validation($data, $files);
-
-        $content = mapping_import::get_source_content((object)$data);
+    protected function validation(array $data, array &$allerrors): void {
+        $content = $this->get_source_content();
         if ($content === '') {
-            $errors['sourcefile'] = get_string('import_error_source', 'auth_musaml');
-            return $errors;
+            $allerrors['sourcefile'][] = get_string('import_error_source', 'auth_musaml');
+            return;
         }
-
         // Only a check, the page stores what the import needs.
         try {
             $rows = mapping_import::parse($content, $data['encoding'], $data['delimiter_name']);
         } catch (coding_exception $e) {
-            $errors['sourcefile'] = $e->getMessage();
-            return $errors;
+            $allerrors['sourcefile'][] = $e->getMessage();
+            return;
         }
-
         if ($errorcode = mapping_import::check_rows($rows)) {
-            $errors['sourcefile'] = get_string($errorcode, 'auth_musaml');
+            $allerrors['sourcefile'][] = get_string($errorcode, 'auth_musaml');
         }
-
-        return $errors;
     }
 }

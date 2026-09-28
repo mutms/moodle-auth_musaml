@@ -130,35 +130,36 @@ final class mapping_import_test extends \advanced_testcase {
         $columns = ['headers' => true, 'map' => [0 => mapping_import::COLUMN_GUID, 1 => 'email']];
 
         // Nothing stored yet, the wizard asks for the data.
-        foreach ([0, 42] as $draftid) {
-            $csvdata = mapping_import::get_data($draftid);
+        foreach ([[], ['rows' => 'x'], ['rows' => [['a'], ['b', 'c']]]] as $stored) {
+            $csvdata = mapping_import::validate($stored);
             $this->assertSame([], $csvdata->rows);
             $this->assertSame([], $csvdata->columns);
             $this->assertSame([], $csvdata->options);
             $this->assertTrue(mapping_import::is_source_stage($csvdata));
         }
 
-        // The source stage stores the rows, pasted or uploaded.
-        $formdata = (object)['sourcefile' => 42, 'csvtext' => "guid,email\nz-1,one@example.com",
-            'encoding' => 'UTF-8', 'delimiter_name' => mapping_import::DELIMITER_AUTO];
-        $csvdata = mapping_import::save_source($formdata);
-
+        // The source stage parses the pasted or uploaded text.
+        $csvdata = mapping_import::save_source("guid,email\nz-1,one@example.com", 'UTF-8', mapping_import::DELIMITER_AUTO);
         $this->assertSame($rows, $csvdata->rows);
-        $this->assertEquals($csvdata, mapping_import::get_data(42));
         $this->assertFalse(mapping_import::is_source_stage($csvdata));
         $this->assertTrue(mapping_import::is_columns_stage($csvdata));
+        // The state survives the JSON round trip of the wizard storage.
+        $this->assertEquals($csvdata, mapping_import::validate(json_decode(json_encode($csvdata), true)));
 
-        // The columns stage stores what each column holds.
-        $csvdata = mapping_import::save_columns($csvdata, (object)['sourcefile' => 42, 'headers' => 1,
+        // The columns stage adds what each column holds.
+        $csvdata = mapping_import::save_columns($csvdata, (object)['headers' => 1,
             'column_0' => mapping_import::COLUMN_GUID, 'column_1' => 'email']);
-
         $this->assertSame($columns, $csvdata->columns);
         $this->assertFalse(mapping_import::is_columns_stage($csvdata));
         $this->assertTrue(mapping_import::is_options_stage($csvdata));
-        $this->assertSame($columns, mapping_import::get_data(42)->columns);
 
-        mapping_import::delete_data(42);
-        $this->assertTrue(mapping_import::is_source_stage(mapping_import::get_data(42)));
+        // Confirmed options have to be confirmed again after the columns changed.
+        $csvdata = mapping_import::save_options($csvdata, (object)['setauth' => 1]);
+        $this->assertFalse(mapping_import::is_options_stage($csvdata));
+        $csvdata = mapping_import::save_columns($csvdata, (object)['headers' => 1,
+            'column_0' => mapping_import::COLUMN_GUID, 'column_1' => 'email']);
+        $this->assertTrue(mapping_import::is_options_stage($csvdata));
+        $this->assertSame(1, $csvdata->options['setauth']);
     }
 
     public function test_options_stage_needs_every_option(): void {
@@ -177,12 +178,12 @@ final class mapping_import_test extends \advanced_testcase {
         $this->assertSame(['setauth' => 1], $csvdata->options);
 
         // Confirming the options ends the questions, the import may run.
-        $formdata = (object)['sourcefile' => 43, 'setauth' => 1, 'allowotherauth' => 0];
+        $formdata = (object)['setauth' => 1, 'allowotherauth' => 0];
         $csvdata = mapping_import::save_options($csvdata, $formdata);
 
         $this->assertFalse($csvdata->options['preview']);
         $this->assertFalse(mapping_import::is_options_stage($csvdata));
-        $this->assertFalse(mapping_import::is_options_stage(mapping_import::get_data(43)));
+        $this->assertFalse(mapping_import::is_options_stage(mapping_import::validate(json_decode(json_encode($csvdata), true))));
 
         // A document that claims the options were confirmed must answer all of them.
         foreach (mapping_import::get_option_names() as $name) {

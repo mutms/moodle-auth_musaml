@@ -19,6 +19,7 @@
 // NOTE: no MOODLE_INTERNAL test here, this is a Behat context file.
 // The moodle_url type is required by behat_base signatures, autoloading is not available yet.
 
+use Behat\Gherkin\Node\TableNode;
 use Behat\Mink\Exception\ExpectationException;
 
 require_once(__DIR__ . '/../../../../lib/behat/behat_base.php');
@@ -200,8 +201,8 @@ final class behat_auth_musaml extends behat_base {
     /**
      * Fill a field with the URL of a metadata fixture served by the test site.
      *
-     * @When I set the field :field to the auth_musaml fixture :fixture URL
-     * @param string $field
+     * @When I set the muform field :field to the auth_musaml fixture :fixture URL
+     * @param string $field muform element name or label
      * @param string $fixture
      */
     public function set_field_to_fixture_url(string $field, string $fixture): void {
@@ -210,14 +211,14 @@ final class behat_auth_musaml extends behat_base {
             throw new ExpectationException('Unknown fixture ' . $fixture, $this->getSession());
         }
         $url = $CFG->wwwroot . '/auth/musaml/tests/fixtures/' . $fixture;
-        $this->execute('behat_forms::i_set_the_field_to', [$field, $url]);
+        $this->execute('behat_tool_mulib::i_set_the_following_muform_fields', [new TableNode([[$field, $url]])]);
     }
 
     /**
      * Fill a field with the content of a metadata fixture, the way a downloaded file is pasted.
      *
-     * @When I set the field :field to the auth_musaml fixture :fixture XML
-     * @param string $field
+     * @When I set the muform field :field to the auth_musaml fixture :fixture XML
+     * @param string $field muform element name or label
      * @param string $fixture
      */
     public function set_field_to_fixture_xml(string $field, string $fixture): void {
@@ -225,7 +226,8 @@ final class behat_auth_musaml extends behat_base {
         if (!file_exists($path)) {
             throw new ExpectationException('Unknown fixture ' . $fixture, $this->getSession());
         }
-        $this->execute('behat_forms::i_set_the_field_to', [$field, file_get_contents($path)]);
+        $table = new TableNode([[$field, file_get_contents($path)]]);
+        $this->execute('behat_tool_mulib::i_set_the_following_muform_fields', [$table]);
     }
 
     #[\Override]

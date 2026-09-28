@@ -27,8 +27,8 @@
 use auth_musaml\local\idp;
 use auth_musaml\local\provider\base as provider;
 use auth_musaml\local\saml;
-use tool_mulib\output\ajax_form\button;
-use tool_mulib\output\ajax_form\link;
+use tool_mulib\output\muform\dialog\button;
+use tool_mulib\output\muform\dialog\link;
 use tool_mulib\output\entity_details;
 use tool_mulib\output\header_actions;
 
@@ -55,24 +55,24 @@ $actions = new header_actions(get_string('actions'));
 
 $url = new \core\url('/auth/musaml/management/idp_update.php', ['id' => $idp->id]);
 $button = new button($url, get_string('idp_update', 'auth_musaml'));
-$button->set_submitted_action($button::SUBMITTED_ACTION_RELOAD);
-$button->set_form_size('lg');
+$button->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_RELOAD);
+$button->set_form_size('xl');
 $actions->add_button($button);
 
 // Metadata pasted as XML has no URL to refresh from, new certificates are pasted by hand.
 if ($idp->metadataurl !== '') {
     $url = new \core\url('/auth/musaml/management/certificate_refresh.php', ['id' => $idp->id]);
     $link = new link($url, get_string('idp_metadata_refresh', 'auth_musaml'), '');
-    $link->set_submitted_action($link::SUBMITTED_ACTION_RELOAD);
-    $link->set_form_size('sm');
-    $actions->get_dropdown()->add_ajax_form($link);
+    $link->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_RELOAD);
+    $link->set_form_size('lg');
+    $actions->get_dropdown()->add_dialog($link);
 }
 
 $url = new \core\url('/auth/musaml/management/certificate_edit.php', ['id' => $idp->id]);
 $link = new link($url, get_string('idp_certificates_edit', 'auth_musaml'), '');
-$link->set_submitted_action($link::SUBMITTED_ACTION_RELOAD);
+$link->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_RELOAD);
 $link->set_form_size('lg');
-$actions->get_dropdown()->add_ajax_form($link);
+$actions->get_dropdown()->add_dialog($link);
 
 if ($idp->enabled && saml::has_sp_certificate()) {
     $url = new \core\url('/auth/musaml/login.php', ['id' => $idp->id, 'test' => 1, 'sesskey' => sesskey()]);
@@ -83,10 +83,10 @@ $actions->get_dropdown()->add_divider();
 
 $url = new \core\url('/auth/musaml/management/idp_delete.php', ['id' => $idp->id]);
 $link = new link($url, get_string('idp_delete', 'auth_musaml'), '');
-$link->set_submitted_action($link::SUBMITTED_ACTION_REDIRECT);
-$link->set_form_size('sm');
+$link->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_REDIRECT);
+$link->set_form_size('lg');
 $link->add_class('text-danger');
-$actions->get_dropdown()->add_ajax_form($link);
+$actions->get_dropdown()->add_dialog($link);
 
 $PAGE->add_header_action($OUTPUT->render($actions));
 

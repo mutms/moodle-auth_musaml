@@ -19,6 +19,13 @@
 namespace auth_musaml\local\form;
 
 use auth_musaml\local\provider\base as provider;
+use core\param;
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\hidden;
+use tool_mulib\muform\element\info;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\form;
 
 /**
  * Create IDP, step two: details prefilled from metadata and provider.
@@ -27,46 +34,43 @@ use auth_musaml\local\provider\base as provider;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class idp_create extends \tool_mulib\local\ajax_form {
+final class idp_create extends form {
     use idp_fields_trait;
 
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
-        $metadata = $this->_customdata['metadata'];
-        $providerclass = provider::get_class($this->_customdata['provider']);
+        $extra = $this->get_extra_data();
+        $metadata = $extra['metadata'];
+        $providerclass = provider::get_class($extra['provider']);
 
-        $mform->addElement('hidden', 'metadatasource');
-        $mform->setType('metadatasource', PARAM_RAW);
-        $mform->setConstant('metadatasource', $this->_customdata['metadatasource']);
+        $source = (new hidden('metadatasource', param::RAW))
+            ->set_default($extra['metadatasource']);
+        $this->add($source);
 
-        $mform->addElement('static', 'entityidstatic', get_string('idp_entityid', 'auth_musaml'), s($metadata['entityid']));
-        $mform->addElement('static', 'ssourlstatic', get_string('idp_ssourl', 'auth_musaml'), s($metadata['ssourl']));
+        $this->add(new info('entityid', get_string('idp_entityid', 'auth_musaml'), $metadata['entityid'], info::PLAIN));
+        $this->add(new info('ssourl', get_string('idp_ssourl', 'auth_musaml'), $metadata['ssourl'], info::PLAIN));
         if ($metadata['attributes']) {
-            $mform->addElement(
-                'static',
-                'attributesstatic',
-                get_string('idp_advertisedattributes', 'auth_musaml'),
-                s(implode(', ', $metadata['attributes']))
-            );
+            $label = get_string('idp_advertisedattributes', 'auth_musaml');
+            $this->add(new info('advertisedattributes', $label, implode(', ', $metadata['attributes']), info::PLAIN));
         }
 
-        $this->add_idp_fields($mform);
-
         $defaults = $providerclass::get_form_defaults($metadata);
-        $mform->setDefault('provider', $providerclass::get_type());
-        $mform->setDefault('name', $metadata['displayname'] ?? $defaults['name']);
-        $mform->setDefault('mapattr', $defaults['mapattr']);
-        $mform->setDefault('attrsimple', $defaults['attrsimple']);
-        $mform->setDefault('enabled', 1);
-        $mform->setDefault('automap', 1);
+        $this->add_idp_fields($providerclass::get_type(), [
+            'provider' => $providerclass::get_type(),
+            'name' => $metadata['displayname'] ?? $defaults['name'],
+            'mapattr' => $defaults['mapattr'],
+            'attrsimple' => $defaults['attrsimple'],
+            'enabled' => 1,
+            'automap' => 1,
+        ]);
 
-        $this->add_action_buttons(true, get_string('idp_create', 'auth_musaml'));
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string('idp_create', 'auth_musaml')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 
     #[\Override]
-    public function validation($data, $files): array {
-        $errors = parent::validation($data, $files);
-        return array_merge($errors, $this->validate_idp_fields($data));
+    protected function validation(array $data, array &$allerrors): void {
+        $this->validate_idp_fields($data, $allerrors);
     }
 }

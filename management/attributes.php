@@ -28,8 +28,8 @@ use auth_musaml\local\attribute;
 use auth_musaml\local\idp;
 use auth_musaml\local\login;
 use auth_musaml\local\saml;
-use tool_mulib\output\ajax_form\button;
-use tool_mulib\output\ajax_form\icon;
+use tool_mulib\output\muform\dialog\button;
+use tool_mulib\output\muform\dialog\icon;
 use tool_mulib\output\header_actions;
 
 // phpcs:disable moodle.Commenting.InlineComment.TypeHintingMatch
@@ -53,7 +53,7 @@ idp::setup_page($idp, $pageurl, 'idp_attributes');
 $actions = new header_actions(get_string('actions'));
 $url = new \core\url('/auth/musaml/management/attribute_create.php', ['idpid' => $idp->id]);
 $addbutton = new button($url, get_string('attribute_create', 'auth_musaml'), true);
-$addbutton->set_submitted_action($addbutton::SUBMITTED_ACTION_RELOAD);
+$addbutton->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_RELOAD);
 $actions->add_button($addbutton);
 
 // Mapping attributes without seeing what arrives is guesswork, keep the test at hand.
@@ -85,11 +85,11 @@ if (!$attributes) {
     foreach ($attributes as $attribute) {
         $url = new \core\url('/auth/musaml/management/attribute_update.php', ['id' => $attribute->id]);
         $edit = new icon($url, get_string('attribute_update', 'auth_musaml'), 't/edit');
-        $edit->set_submitted_action($edit::SUBMITTED_ACTION_RELOAD);
+        $edit->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_RELOAD);
 
         $url = new \core\url('/auth/musaml/management/attribute_delete.php', ['id' => $attribute->id]);
         $delete = new icon($url, get_string('attribute_delete', 'auth_musaml'), 't/delete');
-        $delete->set_submitted_action($delete::SUBMITTED_ACTION_RELOAD);
+        $delete->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_RELOAD);
         $delete->set_form_size('sm');
         $delete->add_class('text-danger');
 
@@ -129,7 +129,7 @@ if ($test) {
             $params = ['idpid' => $idp->id, 'idpattr' => $name];
             $url = new \core\url('/auth/musaml/management/attribute_create.php', $params);
             $add = new icon($url, get_string('attribute_create', 'auth_musaml'), 't/add');
-            $add->set_submitted_action($add::SUBMITTED_ACTION_RELOAD);
+            $add->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_RELOAD);
             $action = $OUTPUT->render($add);
         }
         $table->data[] = [s($name), s(implode(', ', $values)), $action];

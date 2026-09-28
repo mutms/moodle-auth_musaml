@@ -18,6 +18,14 @@
 
 namespace auth_musaml\local\form;
 
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\hidden;
+use tool_mulib\muform\element\info;
+use tool_mulib\muform\element\inforawhtml;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\form;
+
 /**
  * Metadata refresh confirmation form.
  *
@@ -25,19 +33,15 @@ namespace auth_musaml\local\form;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class certificate_refresh extends \tool_mulib\local\ajax_form {
+final class certificate_refresh extends form {
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
-        $idp = $this->_customdata['idp'];
+        $this->add(new inforawhtml('refreshinfo', '', '<p>' . s(get_string('idp_metadata_refresh_info', 'auth_musaml')) . '</p>'));
+        $this->add(new info('metadataurl', get_string('idp_metadataurl', 'auth_musaml'), info::PLAIN));
+        $this->add(new hidden('id'));
 
-        $mform->addElement('html', '<p>' . get_string('idp_metadata_refresh_info', 'auth_musaml') . '</p>');
-        $mform->addElement('static', 'staticurl', get_string('idp_metadataurl', 'auth_musaml'), s($idp->metadataurl));
-
-        $mform->addElement('hidden', 'id');
-        $mform->setType('id', PARAM_INT);
-        $mform->setConstant('id', $idp->id);
-
-        $this->add_action_buttons(true, get_string('idp_metadata_refresh', 'auth_musaml'));
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string('idp_metadata_refresh', 'auth_musaml')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 }

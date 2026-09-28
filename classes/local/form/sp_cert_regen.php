@@ -20,6 +20,13 @@ namespace auth_musaml\local\form;
 
 use auth_musaml\local\openssl;
 use auth_musaml\local\saml;
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\inforawhtml;
+use tool_mulib\muform\element\number;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\element\text;
+use tool_mulib\muform\form;
 
 /**
  * Regenerate SP certificate form.
@@ -28,50 +35,39 @@ use auth_musaml\local\saml;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class sp_cert_regen extends \tool_mulib\local\ajax_form {
+final class sp_cert_regen extends form {
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
-        $info = $this->_customdata['info'];
-
+        $info = $this->get_extra_data()['info'];
         if ($info) {
-            $warning = '<div class="alert alert-warning">' . get_string('sp_cert_regen_warning', 'auth_musaml') . '</div>';
-            $mform->addElement('html', $warning);
+            $warning = '<div class="alert alert-warning">' . s(get_string('sp_cert_regen_warning', 'auth_musaml')) . '</div>';
+            $this->add(new inforawhtml('warning', '', $warning));
         }
 
-        $mform->addElement('text', 'entityid', get_string('sp_entityid', 'auth_musaml'), 'size="50"');
-        $mform->setType('entityid', PARAM_URL);
-        $mform->setDefault('entityid', saml::get_sp_entityid());
-        $mform->addRule('entityid', null, 'required', null, 'client');
-        $mform->addHelpButton('entityid', 'sp_entityid', 'auth_musaml');
+        $entityid = (new text('entityid', get_string('sp_entityid', 'auth_musaml'), ['type' => 'url', 'width' => 'medium']))
+            ->set_default(saml::get_sp_entityid())
+            ->set_required(true)
+            ->add_help_button('sp_entityid', 'auth_musaml');
+        $this->add($entityid);
 
         $dn = saml::get_default_dn();
+        $commonname = (new text('commonname', get_string('sp_cert_commonname', 'auth_musaml'), ['width' => 'medium']))
+            ->set_default($dn['commonName'])
+            ->set_required(true);
+        $this->add($commonname);
+        $orglabel = get_string('sp_cert_organizationname', 'auth_musaml');
+        $organizationname = (new text('organizationname', $orglabel, ['width' => 'medium']))
+            ->set_default($dn['organizationName'])
+            ->set_required(true);
+        $this->add($organizationname);
 
-        $mform->addElement('text', 'commonname', get_string('sp_cert_commonname', 'auth_musaml'), 'size="50"');
-        $mform->setType('commonname', PARAM_TEXT);
-        $mform->setDefault('commonname', $dn['commonName']);
-        $mform->addRule('commonname', null, 'required', null, 'client');
+        $days = (new number('days', get_string('sp_cert_days', 'auth_musaml'), ['min' => 1, 'max' => 36500, 'width' => 'small']))
+            ->set_default(openssl::CERT_DAYS)
+            ->set_required(true);
+        $this->add($days);
 
-        $mform->addElement('text', 'organizationname', get_string('sp_cert_organizationname', 'auth_musaml'), 'size="50"');
-        $mform->setType('organizationname', PARAM_TEXT);
-        $mform->setDefault('organizationname', $dn['organizationName']);
-        $mform->addRule('organizationname', null, 'required', null, 'client');
-
-        $mform->addElement('text', 'days', get_string('sp_cert_days', 'auth_musaml'), 'size="6"');
-        $mform->setType('days', PARAM_INT);
-        $mform->setDefault('days', openssl::CERT_DAYS);
-        $mform->addRule('days', null, 'required', null, 'client');
-
-        $label = $info ? 'sp_cert_regen' : 'sp_cert_create';
-        $this->add_action_buttons(true, get_string($label, 'auth_musaml'));
-    }
-
-    #[\Override]
-    public function validation($data, $files): array {
-        $errors = parent::validation($data, $files);
-        if ($data['days'] < 1 || $data['days'] > 36500) {
-            $errors['days'] = get_string('error');
-        }
-        return $errors;
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string($info ? 'sp_cert_regen' : 'sp_cert_create', 'auth_musaml')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 }

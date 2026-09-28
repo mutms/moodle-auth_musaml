@@ -19,6 +19,12 @@
 namespace auth_musaml\local\form;
 
 use auth_musaml\local\saml;
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\info;
+use tool_mulib\muform\element\inforawhtml;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\form;
 
 /**
  * Delete SP certificate confirmation form.
@@ -27,18 +33,18 @@ use auth_musaml\local\saml;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class sp_cert_delete extends \tool_mulib\local\ajax_form {
+final class sp_cert_delete extends form {
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
+        $info = '<div class="alert alert-danger">' . s(get_string('sp_cert_delete_info', 'auth_musaml')) . '</div>';
+        $this->add(new inforawhtml('deleteinfo', '', $info));
 
-        $info = '<div class="alert alert-danger">' . get_string('sp_cert_delete_info', 'auth_musaml') . '</div>';
-        $mform->addElement('html', $info);
+        $certinfo = saml::get_sp_certificate_info();
+        $this->add(new info('entityid', get_string('sp_entityid', 'auth_musaml'), saml::get_sp_entityid(), info::PLAIN));
+        $this->add(new info('subject', get_string('sp_cert_subject', 'auth_musaml'), $certinfo['subject'], info::PLAIN));
 
-        $info = saml::get_sp_certificate_info();
-        $mform->addElement('static', 'staticentityid', get_string('sp_entityid', 'auth_musaml'), s(saml::get_sp_entityid()));
-        $mform->addElement('static', 'staticsubject', get_string('sp_cert_subject', 'auth_musaml'), s($info['subject']));
-
-        $this->add_action_buttons(true, get_string('sp_cert_delete', 'auth_musaml'));
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string('sp_cert_delete', 'auth_musaml')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 }

@@ -28,7 +28,7 @@ use auth_musaml\local\idp;
 use auth_musaml\local\saml;
 use auth_musaml\output\sp_urls;
 use core\output\html_writer;
-use tool_mulib\output\ajax_form\button;
+use tool_mulib\output\muform\dialog\button;
 use tool_mulib\output\entity_details;
 use tool_mulib\output\header_actions;
 
@@ -56,7 +56,7 @@ $idps = idp::get_all();
 if ($certinfo) {
     $actions = new header_actions(get_string('actions'));
     $button = new button($regenurl, get_string('sp_cert_regen', 'auth_musaml'));
-    $button->set_submitted_action($button::SUBMITTED_ACTION_RELOAD);
+    $button->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_RELOAD);
     $actions->add_button($button);
 
     // Identity providers configured by hand ask for the certificate as a file.
@@ -67,7 +67,7 @@ if ($certinfo) {
     if (!$idps) {
         $deleteurl = new \core\url('/auth/musaml/management/sp_cert_delete.php');
         $button = new button($deleteurl, get_string('sp_cert_delete', 'auth_musaml'));
-        $button->set_submitted_action($button::SUBMITTED_ACTION_RELOAD);
+        $button->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_RELOAD);
         $actions->add_button($button);
     }
 
@@ -86,7 +86,7 @@ if (!$certinfo) {
     echo $OUTPUT->notification(get_string('sp_cert_missing', 'auth_musaml'), 'warning', false);
 
     $button = new button($regenurl, get_string('sp_cert_create', 'auth_musaml'), true);
-    $button->set_submitted_action($button::SUBMITTED_ACTION_RELOAD);
+    $button->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_RELOAD);
     echo html_writer::div($OUTPUT->render($button), 'mb-3');
 } else {
     $details = new entity_details();

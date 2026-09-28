@@ -43,7 +43,7 @@ Change these only with the maintainer.
 | `auth.php`                | auth plugin class      | hooks only, decisions live in `classes/local/`          |
 | `login.php`, `endpoints/` | SAML endpoints         | read params, call a helper, redirect                    |
 | `metadata.php`            | SP metadata            | a published document, not an endpoint                   |
-| `management/*.php`        | admin pages            | one purpose each, ajax pages define `AJAX_SCRIPT` first |
+| `management/*.php`        | admin pages            | one purpose each, muform handlers serve dialog and full page (see tool_mulib AGENTS.md) |
 | `classes/local/`          | domain logic           | never decides access                                    |
 | `classes/local/provider/` | product knowledge      | one class per product, no site data                     |
 | `docs/providers/`         | product setup notes    | one page per provider class, quirks and why             |

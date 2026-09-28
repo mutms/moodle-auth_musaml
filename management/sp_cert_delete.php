@@ -27,19 +27,21 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use auth_musaml\local\form\sp_cert_delete;
 use auth_musaml\local\idp;
 use auth_musaml\local\saml;
 use core\exception\moodle_exception;
+use tool_mulib\muform\handler;
 
 // phpcs:disable moodle.Commenting.InlineComment.TypeHintingMatch
+/** @var core_renderer $OUTPUT */
 /** @var moodle_page $PAGE */
 // phpcs:enable moodle.Commenting.InlineComment.TypeHintingMatch
-
-define('AJAX_SCRIPT', true);
 
 require(__DIR__ . '/../../../config.php');
 
 require_login();
+
 $context = \core\context\system::instance();
 require_capability('moodle/site:config', $context);
 
@@ -47,22 +49,28 @@ if (!saml::has_sp_certificate() || idp::get_all()) {
     throw new moodle_exception('error_spcertinuse', 'auth_musaml');
 }
 
-$PAGE->set_url('/auth/musaml/management/sp_cert_delete.php');
+$pageurl = new \core\url('/auth/musaml/management/sp_cert_delete.php', []);
+$PAGE->set_url($pageurl);
 $PAGE->set_context($context);
+
+$handler = handler::from_request();
 
 $returnurl = new \core\url('/auth/musaml/management/sp.php');
 
-$form = new \auth_musaml\local\form\sp_cert_delete(null, []);
+$form = new sp_cert_delete($pageurl, []);
 
 if ($form->is_cancelled()) {
-    $form->ajax_form_cancelled($returnurl);
+    $handler->cancelled($returnurl);
 }
-
-if ($form->get_data()) {
+if ($data = $form->get_data()) {
     // The entity ID belongs to the certificate, the next one starts from the default again.
     unset_config('sp_entityid', 'auth_musaml');
     saml::delete_sp_certificate();
-    $form->ajax_form_submitted($returnurl);
+    $handler->submitted($returnurl);
 }
 
-$form->ajax_form_render();
+$title = get_string('sp_cert_delete', 'auth_musaml');
+$PAGE->set_pagelayout('admin');
+$PAGE->set_title($title);
+$PAGE->set_heading($title);
+$handler->render($form);

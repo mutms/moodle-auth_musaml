@@ -21,6 +21,11 @@ namespace auth_musaml\local\form;
 use auth_musaml\local\idp;
 use auth_musaml\local\provider\base as provider;
 use auth_musaml\local\saml;
+use tool_mulib\muform\element\checkbox;
+use tool_mulib\muform\element\inforawhtml;
+use tool_mulib\muform\element\select;
+use tool_mulib\muform\element\text;
+use tool_mulib\muform\element\textarea;
 
 /**
  * Fields shared by IDP create and update forms.
@@ -33,85 +38,91 @@ trait idp_fields_trait {
     /**
      * Add the editable IDP fields.
      *
-     * @param \MoodleQuickForm $mform
+     * @param string $providertype provider of the identity provider, decides the single logout warning
+     * @param array $defaults default values indexed by element name
      */
-    protected function add_idp_fields(\MoodleQuickForm $mform): void {
-        $mform->addElement('text', 'name', get_string('idp_name', 'auth_musaml'), 'size="50"');
-        $mform->setType('name', PARAM_TEXT);
-        $mform->addRule('name', null, 'required', null, 'client');
-        $mform->addHelpButton('name', 'idp_name', 'auth_musaml');
+    protected function add_idp_fields(string $providertype, array $defaults = []): void {
+        $name = (new text('name', get_string('idp_name', 'auth_musaml'), ['width' => 'medium']))
+            ->set_required(true)
+            ->add_help_button('idp_name', 'auth_musaml');
+        $this->add_idp_field($name, $defaults);
 
-        $mform->addElement('select', 'provider', get_string('idp_provider', 'auth_musaml'), provider::get_menu());
-        $mform->addHelpButton('provider', 'idp_provider', 'auth_musaml');
+        $provider = (new select('provider', get_string('idp_provider', 'auth_musaml'), provider::get_menu()))
+            ->add_help_button('idp_provider', 'auth_musaml');
+        $this->add_idp_field($provider, $defaults);
 
-        $mform->addElement('advcheckbox', 'enabled', get_string('idp_enabled', 'auth_musaml'));
+        $this->add_idp_field(new checkbox('enabled', get_string('idp_enabled', 'auth_musaml')), $defaults);
 
         $tenants = idp::get_tenant_menu();
         if ($tenants) {
-            $mform->addElement('select', 'tenantid', get_string('idp_tenant', 'auth_musaml'), $tenants);
-            $mform->addHelpButton('tenantid', 'idp_tenant', 'auth_musaml');
+            $tenantid = (new select('tenantid', get_string('idp_tenant', 'auth_musaml'), $tenants))
+                ->add_help_button('idp_tenant', 'auth_musaml');
+            $this->add_idp_field($tenantid, $defaults);
         }
 
-        $mform->addElement('text', 'mapattr', get_string('idp_mapattr', 'auth_musaml'), 'size="50"');
-        $mform->setType('mapattr', PARAM_RAW_TRIMMED);
-        $mform->addRule('mapattr', null, 'required', null, 'client');
-        $mform->addHelpButton('mapattr', 'idp_mapattr', 'auth_musaml');
+        $mapattr = (new text('mapattr', get_string('idp_mapattr', 'auth_musaml'), ['type' => 'rawtext', 'width' => 'medium']))
+            ->set_required(true)
+            ->add_help_button('idp_mapattr', 'auth_musaml');
+        $this->add_idp_field($mapattr, $defaults);
 
-        $mform->addElement('advcheckbox', 'attrsimple', get_string('idp_attrsimple', 'auth_musaml'));
-        $mform->addHelpButton('attrsimple', 'idp_attrsimple', 'auth_musaml');
+        foreach (['attrsimple', 'automap', 'autocreate'] as $flag) {
+            $checkbox = (new checkbox($flag, get_string('idp_' . $flag, 'auth_musaml')))
+                ->add_help_button('idp_' . $flag, 'auth_musaml');
+            $this->add_idp_field($checkbox, $defaults);
+        }
 
-        $mform->addElement('advcheckbox', 'automap', get_string('idp_automap', 'auth_musaml'));
-        $mform->addHelpButton('automap', 'idp_automap', 'auth_musaml');
+        $prefixlabel = get_string('idp_usernameprefix', 'auth_musaml');
+        $usernameprefix = (new text('usernameprefix', $prefixlabel, ['type' => 'rawtext', 'width' => 'small']))
+            ->add_help_button('idp_usernameprefix', 'auth_musaml');
+        $this->add_idp_field($usernameprefix, $defaults);
 
-        $mform->addElement('advcheckbox', 'autocreate', get_string('idp_autocreate', 'auth_musaml'));
-        $mform->addHelpButton('autocreate', 'idp_autocreate', 'auth_musaml');
+        $autologin = (new checkbox('autologin', get_string('idp_autologin', 'auth_musaml')))
+            ->add_help_button('idp_autologin', 'auth_musaml');
+        $this->add_idp_field($autologin, $defaults);
 
-        $mform->addElement('text', 'usernameprefix', get_string('idp_usernameprefix', 'auth_musaml'), 'size="20"');
-        $mform->setType('usernameprefix', PARAM_RAW_TRIMMED);
-        $mform->addHelpButton('usernameprefix', 'idp_usernameprefix', 'auth_musaml');
-
-        $mform->addElement('advcheckbox', 'autologin', get_string('idp_autologin', 'auth_musaml'));
-        $mform->addHelpButton('autologin', 'idp_autologin', 'auth_musaml');
-
-        $providerclass = provider::get_class($this->_customdata['idp']->provider ?? $this->_customdata['provider'] ?? '');
+        $providerclass = provider::get_class($providertype);
         if (!$providerclass::supports_slo()) {
             $warning = get_string('idp_autologin_noslo', 'auth_musaml', $providerclass::get_name());
-            $mform->addElement('static', 'autologinwarning', '', '<div class="alert alert-warning">' . $warning . '</div>');
-            $mform->hideIf('autologinwarning', 'autologin', 'notchecked');
+            $this->add(new inforawhtml('autologinwarning', '', '<div class="alert alert-warning">' . s($warning) . '</div>'));
+            $this->get_display_manager()->hide_if('autologinwarning', 'autologin', 'notchecked');
         }
 
-        $mform->addElement(
-            'textarea',
-            'customsettingsjson',
-            get_string('idp_customsettings', 'auth_musaml'),
-            ['rows' => 6, 'cols' => 70, 'class' => 'text-monospace']
-        );
-        $mform->setType('customsettingsjson', PARAM_RAW);
-        $mform->addHelpButton('customsettingsjson', 'idp_customsettings', 'auth_musaml');
+        $settingslabel = get_string('idp_customsettings', 'auth_musaml');
+        $customsettings = (new textarea('customsettingsjson', $settingslabel, ['type' => 'rawtext', 'rows' => 6]))
+            ->add_help_button('idp_customsettings', 'auth_musaml');
+        $this->add_idp_field($customsettings, $defaults);
+    }
+
+    /**
+     * Add one field with its default.
+     *
+     * @param \tool_mulib\muform\element $element
+     * @param array $defaults
+     */
+    private function add_idp_field(\tool_mulib\muform\element $element, array $defaults): void {
+        if (array_key_exists($element->get_name(), $defaults)) {
+            $element->set_default($defaults[$element->get_name()]);
+        }
+        $this->add($element);
     }
 
     /**
      * Validate the shared fields.
      *
      * @param array $data
-     * @return array errors
+     * @param array $allerrors
      */
-    protected function validate_idp_fields(array $data): array {
-        $errors = [];
-        if (trim($data['name']) === '') {
-            $errors['name'] = get_string('required');
+    protected function validate_idp_fields(array $data, array &$allerrors): void {
+        if (trim((string)$data['mapattr']) === '') {
+            $allerrors['mapattr'][] = get_string('required');
         }
-        if (trim($data['mapattr']) === '') {
-            $errors['mapattr'] = get_string('required');
-        }
-        $prefix = trim($data['usernameprefix'] ?? '');
+        $prefix = trim((string)($data['usernameprefix'] ?? ''));
         if ($prefix !== '' && (\core_text::strlen($prefix) > 50 || !preg_match('/^[a-z0-9._-]+$/', $prefix))) {
-            $errors['usernameprefix'] = get_string('error_usernameprefix', 'auth_musaml');
+            $allerrors['usernameprefix'][] = get_string('error_usernameprefix', 'auth_musaml');
         }
         $error = saml::validate_custom_settings($data['customsettingsjson'] ?? null);
         if ($error !== null) {
-            $errors['customsettingsjson'] = $error;
+            $allerrors['customsettingsjson'][] = $error;
         }
-        return $errors;
     }
 }

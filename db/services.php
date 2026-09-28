@@ -43,12 +43,4 @@ $functions = [
         'ajax' => false,
         'loginrequired' => true,
     ],
-    'auth_musaml_form_autocomplete_user_mapping_userid' => [
-        'classname' => auth_musaml\external\form_autocomplete\user_mapping_userid::class,
-        'description' => 'Returns list of users that may be mapped to an identity provider.',
-        'type' => 'read',
-        'capabilities' => 'auth/musaml:managemappings',
-        'ajax' => true,
-        'loginrequired' => true,
-    ],
 ];

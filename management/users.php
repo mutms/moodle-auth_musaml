@@ -26,8 +26,8 @@
 
 use auth_musaml\local\idp;
 use auth_musaml\local\mapping;
-use tool_mulib\output\ajax_form\button;
-use tool_mulib\output\ajax_form\icon;
+use tool_mulib\output\muform\dialog\button;
+use tool_mulib\output\muform\dialog\icon;
 use tool_mulib\output\header_actions;
 
 // phpcs:disable moodle.Commenting.InlineComment.TypeHintingMatch
@@ -51,7 +51,7 @@ idp::setup_mappings_page($idp, $pageurl);
 $actions = new header_actions(get_string('actions'));
 $url = new \core\url('/auth/musaml/management/user_create.php', ['idpid' => $idp->id]);
 $addbutton = new button($url, get_string('user_mapping_create', 'auth_musaml'), true);
-$addbutton->set_submitted_action($addbutton::SUBMITTED_ACTION_RELOAD);
+$addbutton->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_RELOAD);
 $actions->add_button($addbutton);
 $url = new \core\url('/auth/musaml/management/user_upload.php', ['id' => $idp->id]);
 $actions->get_dropdown()->add_item(get_string('import', 'auth_musaml'), $url);
@@ -78,11 +78,11 @@ if (!$mappings) {
         $userurl = new \core\url('/user/profile.php', ['id' => $m->userid]);
         $url = new \core\url('/auth/musaml/management/user_update.php', ['id' => $m->id]);
         $edit = new icon($url, get_string('user_mapping_update', 'auth_musaml'), 't/edit');
-        $edit->set_submitted_action($edit::SUBMITTED_ACTION_RELOAD);
+        $edit->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_RELOAD);
 
         $url = new \core\url('/auth/musaml/management/user_delete.php', ['id' => $m->id]);
         $delete = new icon($url, get_string('user_mapping_delete', 'auth_musaml'), 't/delete');
-        $delete->set_submitted_action($delete::SUBMITTED_ACTION_RELOAD);
+        $delete->set_submitted_action(\tool_mulib\muform\handler\dialog::ACTION_RELOAD);
         $delete->set_form_size('sm');
         $delete->add_class('text-danger');
 

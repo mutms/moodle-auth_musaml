@@ -51,34 +51,10 @@ final class saml {
     /**
      * Load the vendored php-saml library.
      *
-     * The Composer autoloader of the plugin is deliberately not used, loading it would
-     * register Composer\InstalledVersions with this plugin as the root package and Moodle
-     * would then look for its own dependencies in the plugin composer.lock.
+     * The Composer autoloader of the plugin is deliberately not used, see vendor/README.md.
      */
     public static function init(): void {
-        static $loaded = false;
-        if ($loaded) {
-            return;
-        }
-        $loaded = true;
-
-        $namespaces = [
-            'OneLogin\\' => __DIR__ . '/../../vendor/onelogin/php-saml/src/',
-            'RobRichards\\XMLSecLibs\\' => __DIR__ . '/../../vendor/robrichards/xmlseclibs/src/',
-        ];
-        spl_autoload_register(function (string $class) use ($namespaces): void {
-            foreach ($namespaces as $prefix => $dir) {
-                if (strpos($class, $prefix) !== 0) {
-                    continue;
-                }
-                $relative = substr($class, strlen($prefix));
-                $file = $dir . str_replace('\\', '/', $relative) . '.php';
-                if (file_exists($file)) {
-                    require_once($file);
-                }
-                return;
-            }
-        });
+        \tool_mulib\local\vendor_loader::register(__DIR__ . '/../../vendor');
     }
 
     /**
@@ -488,10 +464,18 @@ final class saml {
         if ($xml === '') {
             throw new moodle_exception('error_metadataparse', 'auth_musaml', '', 'empty document');
         }
+        // Broken XML is reported by the exception below, libxml must not print warnings into the page.
+        $previous = libxml_use_internal_errors(true);
         try {
             $parsed = IdPMetadataParser::parseXML($xml);
         } catch (\Throwable $e) {
-            throw new moodle_exception('error_metadataparse', 'auth_musaml', '', $e->getMessage());
+            // The library only says it failed, the first libxml error says why.
+            $xmlerror = libxml_get_errors()[0] ?? null;
+            $detail = $xmlerror ? trim($xmlerror->message) : $e->getMessage();
+            throw new moodle_exception('error_metadataparse', 'auth_musaml', '', $detail);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
         }
         $idp = $parsed['idp'] ?? [];
         if (empty($idp['entityId']) || empty($idp['singleSignOnService']['url'])) {

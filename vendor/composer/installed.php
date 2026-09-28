@@ -3,7 +3,7 @@
         'name' => '__root__',
         'pretty_version' => 'dev-MOODLE_503_DEV',
         'version' => 'dev-MOODLE_503_DEV',
-        'reference' => '2ab440422da098ebe379fa7bff54928796c02338',
+        'reference' => '24d62e48f33b091835451495e50cdc3a83025db5',
         'type' => 'library',
         'install_path' => __DIR__ . '/../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         '__root__' => array(
             'pretty_version' => 'dev-MOODLE_503_DEV',
             'version' => 'dev-MOODLE_503_DEV',
-            'reference' => '2ab440422da098ebe379fa7bff54928796c02338',
+            'reference' => '24d62e48f33b091835451495e50cdc3a83025db5',
             'type' => 'library',
             'install_path' => __DIR__ . '/../',
             'aliases' => array(),

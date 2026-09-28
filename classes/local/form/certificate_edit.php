@@ -19,6 +19,13 @@
 namespace auth_musaml\local\form;
 
 use auth_musaml\local\idp;
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\checkbox;
+use tool_mulib\muform\element\hidden;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\element\textarea;
+use tool_mulib\muform\form;
 
 /**
  * Identity provider certificate handling form.
@@ -27,44 +34,31 @@ use auth_musaml\local\idp;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class certificate_edit extends \tool_mulib\local\ajax_form {
+final class certificate_edit extends form {
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
-        $idp = $this->_customdata['idp'];
-        $info = idp::get_certinfo($idp);
+        $this->add(new hidden('id'));
 
-        $mform->addElement('hidden', 'id');
-        $mform->setType('id', PARAM_INT);
-        $mform->setConstant('id', $idp->id);
+        $autorefresh = (new checkbox('autorefresh', get_string('idp_autorefresh', 'auth_musaml')))
+            ->add_help_button('idp_autorefresh', 'auth_musaml');
+        $this->add($autorefresh);
 
-        $mform->addElement('advcheckbox', 'autorefresh', get_string('idp_autorefresh', 'auth_musaml'));
-        $mform->addHelpButton('autorefresh', 'idp_autorefresh', 'auth_musaml');
+        $extracerts = (new textarea('extracerts', get_string('idp_extracerts', 'auth_musaml'), ['type' => 'rawtext', 'rows' => 8]))
+            ->add_help_button('idp_extracerts', 'auth_musaml');
+        $this->add($extracerts);
 
-        $options = ['rows' => 8, 'cols' => 70, 'class' => 'text-monospace'];
-        $mform->addElement('textarea', 'extracerts', get_string('idp_extracerts', 'auth_musaml'), $options);
-        $mform->setType('extracerts', PARAM_RAW);
-        $mform->addHelpButton('extracerts', 'idp_extracerts', 'auth_musaml');
-
-        $extra = [];
-        foreach ($info['extracerts'] as $cert) {
-            $extra[] = idp::to_pem($cert['cert']);
-        }
-        $this->set_data(['autorefresh' => $info['autorefresh'], 'extracerts' => implode("\n", $extra)]);
-
-        $this->add_action_buttons(true, get_string('savechanges'));
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string('savechanges')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 
     #[\Override]
-    public function validation($data, $files): array {
-        $errors = parent::validation($data, $files);
-
+    protected function validation(array $data, array &$allerrors): void {
         foreach (idp::split_certificates($data['extracerts'] ?? '') as $cert) {
             if (!\auth_musaml\local\openssl::parse_cert(idp::to_pem($cert))) {
-                $errors['extracerts'] = get_string('error_certificate', 'auth_musaml');
+                $allerrors['extracerts'][] = get_string('error_certificate', 'auth_musaml');
                 break;
             }
         }
-        return $errors;
     }
 }

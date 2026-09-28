@@ -19,6 +19,15 @@
 namespace auth_musaml\local\form;
 
 use auth_musaml\local\mapping_import;
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\checkbox;
+use tool_mulib\muform\element\info;
+use tool_mulib\muform\element\inforawhtml;
+use tool_mulib\muform\element\reload;
+use tool_mulib\muform\element\select;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\form;
 
 /**
  * Mapping import, stage two: what is in each column.
@@ -27,50 +36,33 @@ use auth_musaml\local\mapping_import;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class user_upload_columns extends \tool_mulib\local\ajax_form {
+final class user_upload_columns extends form {
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
-        $idp = $this->_customdata['idp'];
-        $csvdata = $this->_customdata['csvdata'];
-        $draftid = $this->_customdata['draftid'];
-        $rows = $csvdata->rows;
+        $rows = $this->get_extra_data()['rows'];
         $first = $rows[0];
 
-        // The form action carries no query string, so the page needs the id back.
-        $mform->addElement('hidden', 'id');
-        $mform->setType('id', PARAM_INT);
-        $mform->setConstant('id', $idp->id);
+        $this->add(new info('info', '', get_string('import_columns_info', 'auth_musaml', count($rows))));
+        $this->add(new inforawhtml('datapreview', '', $this->render_data($rows)));
 
-        // Pass the original draftitemid through.
-        $mform->addElement('hidden', 'sourcefile');
-        $mform->setType('sourcefile', PARAM_INT);
-        $mform->setConstant('sourcefile', $draftid);
-
-        $mform->addElement('static', 'info', '', get_string('import_columns_info', 'auth_musaml', count($rows)));
-        $mform->addElement('static', 'datapreview', '', $this->render_data($rows));
-
-        $mform->addElement('advcheckbox', 'headers', get_string('import_columns_headers', 'auth_musaml'));
-        $mform->setDefault('headers', (int)mapping_import::guess_headers($first));
+        // Guesses are only defaults, coming back to this stage shows what was chosen before.
+        $headers = (new checkbox('headers', get_string('import_columns_headers', 'auth_musaml')))
+            ->set_default((int)mapping_import::guess_headers($first));
+        $this->add($headers);
 
         $menu = mapping_import::get_column_menu();
         $guesses = mapping_import::guess_columns($first);
         foreach (array_keys($first) as $index) {
             $label = get_string('import_column_number', 'auth_musaml', $index + 1);
-            $mform->addElement('select', 'column_' . $index, $label, $menu);
-            $mform->setDefault('column_' . $index, $guesses[$index] ?? mapping_import::COLUMN_IGNORE);
+            $column = (new select('column_' . $index, $label, $menu))
+                ->set_default($guesses[$index] ?? mapping_import::COLUMN_IGNORE);
+            $this->add($column);
         }
 
-        // Coming back to this stage shows what was chosen before.
-        if ($csvdata->columns) {
-            $data = ['headers' => (int)$csvdata->columns['headers']];
-            foreach ($csvdata->columns['map'] as $index => $value) {
-                $data['column_' . $index] = $value;
-            }
-            $this->set_data($data);
-        }
-
-        $this->add_action_buttons(true, get_string('continue'));
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string('continue')), 'buttons');
+        $this->add(new reload('back', get_string('muform_back', 'tool_mulib')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 
     /**
@@ -85,35 +77,28 @@ final class user_upload_columns extends \tool_mulib\local\ajax_form {
         foreach (array_keys($rows[0]) as $index) {
             $table->head[] = get_string('import_column_number', 'auth_musaml', $index + 1);
         }
-
         $shown = array_slice($rows, 0, mapping_import::DATA_PREVIEW_ROWS);
         foreach ($shown as $row) {
             $table->data[] = array_map('s', $row);
         }
         $html = \core\output\html_writer::table($table);
-
         if (count($rows) > count($shown)) {
             $more = count($rows) - count($shown);
             $html .= \core\output\html_writer::div(get_string('import_more_rows', 'auth_musaml', $more), 'text-muted');
         }
-
         return $html;
     }
 
     #[\Override]
-    public function validation($data, $files): array {
-        $errors = parent::validation($data, $files);
-        $rows = $this->_customdata['csvdata']->rows;
-
+    protected function validation(array $data, array &$allerrors): void {
+        $rows = $this->get_extra_data()['rows'];
         $map = [];
         foreach (array_keys($rows[0]) as $index) {
             $map[$index] = $data['column_' . $index] ?? mapping_import::COLUMN_IGNORE;
         }
         $columns = ['headers' => !empty($data['headers']), 'map' => $map];
         foreach (mapping_import::check_columns($rows, $columns) as $name => $errorcode) {
-            $errors[$name] = get_string($errorcode, 'auth_musaml');
+            $allerrors[$name][] = get_string($errorcode, 'auth_musaml');
         }
-
-        return $errors;
     }
 }

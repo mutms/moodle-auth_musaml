@@ -26,37 +26,50 @@
 
 use auth_musaml\local\form\certificate_edit;
 use auth_musaml\local\idp;
+use tool_mulib\muform\handler;
 
 // phpcs:disable moodle.Commenting.InlineComment.TypeHintingMatch
+/** @var core_renderer $OUTPUT */
 /** @var moodle_page $PAGE */
 /** @var moodle_database $DB */
 // phpcs:enable moodle.Commenting.InlineComment.TypeHintingMatch
 
-define('AJAX_SCRIPT', true);
-
 require(__DIR__ . '/../../../config.php');
 
 require_login();
-$context = context_system::instance();
+
+$context = \core\context\system::instance();
 require_capability('moodle/site:config', $context);
 
 $id = required_param('id', PARAM_INT);
 $idp = $DB->get_record('auth_musaml_idp', ['id' => $id], '*', MUST_EXIST);
 
-$PAGE->set_url('/auth/musaml/management/certificate_edit.php', ['id' => $idp->id]);
+$pageurl = new \core\url('/auth/musaml/management/certificate_edit.php', ['id' => $idp->id]);
+$PAGE->set_url($pageurl);
 $PAGE->set_context($context);
+
+$handler = handler::from_request();
 
 $returnurl = new \core\url('/auth/musaml/management/idp.php', ['id' => $idp->id]);
 
-$form = new certificate_edit(null, ['idp' => $idp]);
+$info = idp::get_certinfo($idp);
+$extra = [];
+foreach ($info['extracerts'] as $cert) {
+    $extra[] = idp::to_pem($cert['cert']);
+}
+$current = ['id' => $idp->id, 'autorefresh' => (int)$info['autorefresh'], 'extracerts' => implode("\n", $extra)];
+$form = new certificate_edit($pageurl, $current);
 
 if ($form->is_cancelled()) {
-    $form->ajax_form_cancelled($returnurl);
+    $handler->cancelled($returnurl);
 }
-
 if ($data = $form->get_data()) {
     idp::update_certinfo($idp, (bool)$data->autorefresh, (string)$data->extracerts);
-    $form->ajax_form_submitted($returnurl);
+    $handler->submitted($returnurl);
 }
 
-$form->ajax_form_render();
+$title = get_string('idp_certificates_edit', 'auth_musaml');
+$PAGE->set_pagelayout('admin');
+$PAGE->set_title($title);
+$PAGE->set_heading($title);
+$handler->render($form);

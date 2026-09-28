@@ -19,6 +19,14 @@
 namespace auth_musaml\local\form;
 
 use auth_musaml\local\mapping_import;
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\checkbox;
+use tool_mulib\muform\element\info;
+use tool_mulib\muform\element\inforawhtml;
+use tool_mulib\muform\element\reload;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\form;
 
 /**
  * Mapping import, stage three: options and the dry run result.
@@ -27,71 +35,46 @@ use auth_musaml\local\mapping_import;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class user_upload_options extends \tool_mulib\local\ajax_form {
+final class user_upload_options extends form {
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
-        $idp = $this->_customdata['idp'];
-        $csvdata = $this->_customdata['csvdata'];
-        $draftid = $this->_customdata['draftid'];
-
-        // The form action carries no query string, so the page needs the id back.
-        $mform->addElement('hidden', 'id');
-        $mform->setType('id', PARAM_INT);
-        $mform->setConstant('id', $idp->id);
-
-        // Same name the file picker of the first stage submits, so the draft area of
-        // the import travels with every stage without touching the URL.
-        $mform->addElement('hidden', 'sourcefile');
-        $mform->setType('sourcefile', PARAM_INT);
-        $mform->setConstant('sourcefile', $draftid);
+        $extra = $this->get_extra_data();
+        $idp = $extra['idp'];
+        $csvdata = $extra['csvdata'];
 
         // What happens to the accounts comes first, the skip list below depends on it.
-        $mform->addElement('advcheckbox', 'allowotherauth', get_string('user_mapping_allowotherauth', 'auth_musaml'));
-        $mform->addHelpButton('allowotherauth', 'user_mapping_allowotherauth', 'auth_musaml');
+        $allowotherauth = (new checkbox('allowotherauth', get_string('user_mapping_allowotherauth', 'auth_musaml')))
+            ->add_help_button('user_mapping_allowotherauth', 'auth_musaml');
+        $this->add($allowotherauth);
+        $setauth = (new checkbox('setauth', get_string('user_mapping_setauth', 'auth_musaml')))
+            ->set_default(1)
+            ->add_help_button('user_mapping_setauth', 'auth_musaml');
+        $this->add($setauth);
 
-        $mform->addElement('advcheckbox', 'setauth', get_string('user_mapping_setauth', 'auth_musaml'));
-        $mform->setDefault('setauth', 1);
-        $mform->addHelpButton('setauth', 'user_mapping_setauth', 'auth_musaml');
-
-        $mform->addElement('static', 'skipinfo', '', get_string('import_skip_info', 'auth_musaml'));
+        $this->add(new info('skipinfo', '', get_string('import_skip_info', 'auth_musaml')));
         foreach (mapping_import::get_skip_menu() as $name => $label) {
-            $mform->addElement('advcheckbox', $name, $label);
-            $mform->setDefault($name, 1);
+            $skip = (new checkbox($name, $label))
+                ->set_default(1);
+            $this->add($skip);
         }
-
-        // An import of a document of an earlier import brings its own options.
-        $this->set_data((object)$csvdata->options);
-
-        $mform->registerNoSubmitButton('refresh');
-        $mform->addElement('submit', 'refresh', get_string('import_refresh', 'auth_musaml'));
-
-        $mform->addElement('static', 'preview', '', '');
-
-        $this->add_action_buttons(true, get_string('import_confirm', 'auth_musaml'));
-    }
-
-    #[\Override]
-    public function definition_after_data(): void {
-        parent::definition_after_data();
-
-        $mform = $this->_form;
-        $idp = $this->_customdata['idp'];
-        $csvdata = $this->_customdata['csvdata'];
 
         // The preview always shows what the options in the form would do right now.
         $options = (object)[];
         foreach (mapping_import::get_option_names() as $name) {
-            $element = $mform->getElement($name);
-            $options->$name = (int)(bool)$element->getValue();
+            $options->$name = (int)$this->get_element($name)->get_value();
         }
-
         $outcomes = mapping_import::check($idp, $csvdata, $options);
-        $mform->getElement('preview')->setValue($this->render_preview($outcomes));
 
-        if (!$this->is_importable($outcomes)) {
-            $mform->getElement('buttonar')->getElements()[0]->updateAttributes(['disabled' => 'disabled']);
+        $this->add(new inforawhtml('preview', '', $this->render_preview($outcomes)));
+
+        // The import button comes first so that Enter never skips the dry run of other options.
+        $this->add(new buttons('buttons'));
+        if (self::is_importable($outcomes)) {
+            $this->add(new submit('submit', get_string('import_confirm', 'auth_musaml')), 'buttons');
         }
+        $this->add(new reload('refresh', get_string('import_refresh', 'auth_musaml')), 'buttons');
+        $this->add(new reload('back', get_string('muform_back', 'tool_mulib')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 
     /**
@@ -100,7 +83,7 @@ final class user_upload_options extends \tool_mulib\local\ajax_form {
      * @param array $outcomes
      * @return bool
      */
-    private function is_importable(array $outcomes): bool {
+    private static function is_importable(array $outcomes): bool {
         $created = 0;
         foreach ($outcomes as $outcome) {
             if ($outcome->result === mapping_import::RESULT_ERROR) {

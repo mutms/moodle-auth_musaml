@@ -27,38 +27,45 @@
 use auth_musaml\local\attribute;
 use auth_musaml\local\form\attribute_delete;
 use auth_musaml\local\idp;
+use tool_mulib\muform\handler;
 
 // phpcs:disable moodle.Commenting.InlineComment.TypeHintingMatch
+/** @var core_renderer $OUTPUT */
 /** @var moodle_page $PAGE */
 /** @var moodle_database $DB */
 // phpcs:enable moodle.Commenting.InlineComment.TypeHintingMatch
 
-define('AJAX_SCRIPT', true);
-
 require(__DIR__ . '/../../../config.php');
 
 require_login();
-$context = context_system::instance();
+
+$context = \core\context\system::instance();
 require_capability('moodle/site:config', $context);
 
 $id = required_param('id', PARAM_INT);
 $attribute = $DB->get_record('auth_musaml_attribute', ['id' => $id], '*', MUST_EXIST);
 $idp = idp::fetch($attribute->idpid);
 
-$PAGE->set_url('/auth/musaml/management/attribute_delete.php', ['id' => $attribute->id]);
+$pageurl = new \core\url('/auth/musaml/management/attribute_delete.php', ['id' => $attribute->id]);
+$PAGE->set_url($pageurl);
 $PAGE->set_context($context);
+
+$handler = handler::from_request();
 
 $returnurl = new \core\url('/auth/musaml/management/attributes.php', ['id' => $idp->id]);
 
-$form = new attribute_delete(null, ['attribute' => $attribute]);
+$form = new attribute_delete($pageurl, $attribute);
 
 if ($form->is_cancelled()) {
-    $form->ajax_form_cancelled($returnurl);
+    $handler->cancelled($returnurl);
 }
-
 if ($data = $form->get_data()) {
     attribute::delete($attribute->id);
-    $form->ajax_form_submitted($returnurl);
+    $handler->submitted($returnurl);
 }
 
-$form->ajax_form_render();
+$title = get_string('attribute_delete', 'auth_musaml');
+$PAGE->set_pagelayout('admin');
+$PAGE->set_title($title);
+$PAGE->set_heading($title);
+$handler->render($form);

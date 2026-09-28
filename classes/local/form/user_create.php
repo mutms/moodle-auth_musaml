@@ -18,8 +18,16 @@
 
 namespace auth_musaml\local\form;
 
-use auth_musaml\external\form_autocomplete\user_mapping_userid;
 use auth_musaml\local\mapping;
+use auth_musaml\muform\autocomplete\user_mapping_userid;
+use tool_mulib\muform\element\autocomplete;
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\checkbox;
+use tool_mulib\muform\element\hidden;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\element\text;
+use tool_mulib\muform\form;
 
 /**
  * Create user mapping form.
@@ -28,49 +36,67 @@ use auth_musaml\local\mapping;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class user_create extends \tool_mulib\local\ajax_form {
+final class user_create extends form {
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
-        $idp = $this->_customdata['idp'];
-        $context = \core\context\system::instance();
+        $idp = $this->get_extra_data()['idp'];
 
-        $mform->addElement('hidden', 'idpid');
-        $mform->setType('idpid', PARAM_INT);
-        $mform->setConstant('idpid', $idp->id);
+        $this->add(new hidden('idpid'));
 
-        $userlabel = get_string('user_mapping_user', 'auth_musaml');
-        user_mapping_userid::add_element($mform, ['idpid' => $idp->id], 'userid', $userlabel, $context);
-        $mform->addHelpButton('userid', 'user_mapping_user', 'auth_musaml');
+        $source = new user_mapping_userid((int)$idp->id);
+        $userid = (new autocomplete('userid', get_string('user_mapping_user', 'auth_musaml'), $source))
+            ->set_required(true)
+            ->add_help_button('user_mapping_user', 'auth_musaml');
+        $this->add($userid);
 
-        $mform->addElement('text', 'guid', get_string('user_mapping_guid', 'auth_musaml'), 'size="50"');
-        $mform->setType('guid', PARAM_RAW_TRIMMED);
-        $mform->addRule('guid', null, 'required', null, 'client');
-        $mform->addHelpButton('guid', 'user_mapping_guid', 'auth_musaml');
+        $guidattributes = ['type' => 'rawtext', 'maxlength' => 255, 'width' => 'medium'];
+        $guid = (new text('guid', get_string('user_mapping_guid', 'auth_musaml'), $guidattributes))
+            ->set_required(true)
+            ->add_help_button('user_mapping_guid', 'auth_musaml');
+        $this->add($guid);
 
-        $mform->addElement('advcheckbox', 'allowotherauth', get_string('user_mapping_allowotherauth', 'auth_musaml'));
-        $mform->addHelpButton('allowotherauth', 'user_mapping_allowotherauth', 'auth_musaml');
+        $allowotherauth = (new checkbox('allowotherauth', get_string('user_mapping_allowotherauth', 'auth_musaml')))
+            ->add_help_button('user_mapping_allowotherauth', 'auth_musaml');
+        $this->add($allowotherauth);
 
-        $mform->addElement('advcheckbox', 'setauth', get_string('user_mapping_setauth', 'auth_musaml'));
-        $mform->setDefault('setauth', 1);
-        $mform->addHelpButton('setauth', 'user_mapping_setauth', 'auth_musaml');
+        $setauth = (new checkbox('setauth', get_string('user_mapping_setauth', 'auth_musaml')))
+            ->set_default(1)
+            ->add_help_button('user_mapping_setauth', 'auth_musaml');
+        $this->add($setauth);
 
-        $this->add_action_buttons(true, get_string('user_mapping_create', 'auth_musaml'));
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string('user_mapping_create', 'auth_musaml')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 
     #[\Override]
-    public function validation($data, $files): array {
-        $errors = parent::validation($data, $files);
-        $idp = $this->_customdata['idp'];
-
-        $guid = trim($data['guid']);
-        if ($guid === '') {
-            $errors['guid'] = get_string('required');
-        } else if (\core_text::strlen($guid) > 255) {
-            $errors['guid'] = get_string('error');
-        } else if (mapping::fetch_by_guid($idp->id, $guid)) {
-            $errors['guid'] = get_string('error_guidmapped', 'auth_musaml');
+    protected function validation(array $data, array &$allerrors): void {
+        $error = self::validate_guid((string)$data['guid'], (int)$this->get_extra_data()['idp']->id, 0);
+        if ($error !== null) {
+            $allerrors['guid'][] = $error;
         }
-        return $errors;
+    }
+
+    /**
+     * Validate the identity provider account ID.
+     *
+     * @param string $guid
+     * @param int $idpid
+     * @param int $mappingid current mapping, 0 for a new one
+     * @return string|null error text
+     */
+    private static function validate_guid(string $guid, int $idpid, int $mappingid): ?string {
+        $guid = trim($guid);
+        if ($guid === '') {
+            return null;
+        }
+        if (\core_text::strlen($guid) > 255) {
+            return get_string('error');
+        }
+        $other = mapping::fetch_by_guid($idpid, $guid);
+        if ($other && $other->id != $mappingid) {
+            return get_string('error_guidmapped', 'auth_musaml');
+        }
+        return null;
     }
 }

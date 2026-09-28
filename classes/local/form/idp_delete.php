@@ -19,6 +19,13 @@
 namespace auth_musaml\local\form;
 
 use auth_musaml\local\mapping;
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\hidden;
+use tool_mulib\muform\element\info;
+use tool_mulib\muform\element\inforawhtml;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\form;
 
 /**
  * Delete IDP confirmation form.
@@ -27,22 +34,20 @@ use auth_musaml\local\mapping;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class idp_delete extends \tool_mulib\local\ajax_form {
+final class idp_delete extends form {
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
-        $idp = $this->_customdata['idp'];
+        $current = $this->get_current_data();
+        $count = mapping::count_for_idp($current['id']);
+        $info = '<div class="alert alert-danger">' . s(get_string('idp_delete_info', 'auth_musaml', $count)) . '</div>';
+        $this->add(new inforawhtml('deleteinfo', '', $info));
 
-        $count = mapping::count_for_idp($idp->id);
-        $info = '<div class="alert alert-danger">' . get_string('idp_delete_info', 'auth_musaml', $count) . '</div>';
-        $mform->addElement('html', $info);
-        $mform->addElement('static', 'staticname', get_string('idp_name', 'auth_musaml'), format_string($idp->name));
-        $mform->addElement('static', 'staticentityid', get_string('idp_entityid', 'auth_musaml'), s($idp->entityid));
+        $this->add(new info('name', get_string('idp_name', 'auth_musaml')));
+        $this->add(new info('entityid', get_string('idp_entityid', 'auth_musaml'), info::PLAIN));
+        $this->add(new hidden('id'));
 
-        $mform->addElement('hidden', 'id');
-        $mform->setType('id', PARAM_INT);
-        $mform->setConstant('id', $idp->id);
-
-        $this->add_action_buttons(true, get_string('idp_delete', 'auth_musaml'));
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string('idp_delete', 'auth_musaml')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 }

@@ -20,6 +20,13 @@ namespace auth_musaml\local\form;
 
 use auth_musaml\local\idp;
 use core\exception\moodle_exception;
+use tool_mulib\muform\element\buttons;
+use tool_mulib\muform\element\cancel;
+use tool_mulib\muform\element\hidden;
+use tool_mulib\muform\element\info;
+use tool_mulib\muform\element\submit;
+use tool_mulib\muform\element\textarea;
+use tool_mulib\muform\form;
 
 /**
  * Update IDP form.
@@ -30,7 +37,7 @@ use core\exception\moodle_exception;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class idp_update extends \tool_mulib\local\ajax_form {
+final class idp_update extends form {
     use idp_fields_trait;
 
     /** @var array|null parsed metadata when the URL changed */
@@ -38,50 +45,43 @@ final class idp_update extends \tool_mulib\local\ajax_form {
 
     #[\Override]
     protected function definition(): void {
-        $mform = $this->_form;
-        $idp = $this->_customdata['idp'];
+        $current = $this->get_current_data();
 
-        $mform->addElement('hidden', 'id');
-        $mform->setType('id', PARAM_INT);
-        $mform->setConstant('id', $idp->id);
-
-        $mform->addElement('static', 'entityidstatic', get_string('idp_entityid', 'auth_musaml'), s($idp->entityid));
-
-        $label = get_string('idp_metadatasource', 'auth_musaml');
-        $mform->addElement('textarea', 'metadatasource', $label, 'rows="3" cols="80"');
-        $mform->setType('metadatasource', PARAM_RAW);
-        $mform->addHelpButton('metadatasource', 'idp_metadatasource', 'auth_musaml');
-
-        $this->add_idp_fields($mform);
+        $this->add(new hidden('id'));
+        $this->add(new info('entityid', get_string('idp_entityid', 'auth_musaml'), info::PLAIN));
 
         // Pasted metadata is not stored, only its values, so the box shows the URL or nothing.
-        $idp = clone($idp);
-        $idp->metadatasource = $idp->metadataurl;
-        $this->set_data($idp);
-        $this->add_action_buttons(true, get_string('idp_update', 'auth_musaml'));
+        $sourcelabel = get_string('idp_metadatasource', 'auth_musaml');
+        $source = (new textarea('metadatasource', $sourcelabel, ['type' => 'rawtext', 'rows' => 3]))
+            ->add_help_button('idp_metadatasource', 'auth_musaml');
+        $this->add($source);
+
+        $this->add_idp_fields($current['provider']);
+
+        $this->add(new buttons('buttons'));
+        $this->add(new submit('submit', get_string('idp_update', 'auth_musaml')), 'buttons');
+        $this->add(new cancel(), 'buttons');
     }
 
     #[\Override]
-    public function validation($data, $files): array {
-        $errors = parent::validation($data, $files);
-        $errors = array_merge($errors, $this->validate_idp_fields($data));
+    protected function validation(array $data, array &$allerrors): void {
+        $this->validate_idp_fields($data, $allerrors);
 
-        $idp = $this->_customdata['idp'];
+        $idp = $this->get_extra_data()['idp'];
         $source = trim((string)$data['metadatasource']);
         if ($source !== '' && $source !== $idp->metadataurl) {
             try {
                 $metadata = idp::load_metadata_source($source);
                 $other = idp::fetch_by_entityid($metadata['entityid']);
                 if ($other && $other->id != $idp->id) {
-                    $errors['metadatasource'] = get_string('error_entityidexists', 'auth_musaml', $metadata['entityid']);
+                    $allerrors['metadatasource'][] = get_string('error_entityidexists', 'auth_musaml', $metadata['entityid']);
                 } else {
                     $this->metadata = $metadata;
                 }
             } catch (moodle_exception $e) {
-                $errors['metadatasource'] = $e->getMessage();
+                $allerrors['metadatasource'][] = $e->getMessage();
             }
         }
-        return $errors;
     }
 
     /**

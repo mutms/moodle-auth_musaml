@@ -26,37 +26,45 @@
 
 use auth_musaml\local\form\idp_delete;
 use auth_musaml\local\idp;
+use tool_mulib\muform\handler;
 
 // phpcs:disable moodle.Commenting.InlineComment.TypeHintingMatch
+/** @var core_renderer $OUTPUT */
 /** @var moodle_page $PAGE */
 /** @var moodle_database $DB */
 // phpcs:enable moodle.Commenting.InlineComment.TypeHintingMatch
 
-define('AJAX_SCRIPT', true);
-
 require(__DIR__ . '/../../../config.php');
 
 require_login();
+
 $context = \core\context\system::instance();
 require_capability('moodle/site:config', $context);
 
 $id = required_param('id', PARAM_INT);
 $idp = $DB->get_record('auth_musaml_idp', ['id' => $id], '*', MUST_EXIST);
 
-$PAGE->set_url('/auth/musaml/management/idp_delete.php', ['id' => $idp->id]);
+$pageurl = new \core\url('/auth/musaml/management/idp_delete.php', ['id' => $idp->id]);
+$PAGE->set_url($pageurl);
 $PAGE->set_context($context);
 
-$returnurl = new \core\url('/auth/musaml/management/idps.php');
+$handler = handler::from_request();
 
-$form = new idp_delete(null, ['idp' => $idp]);
+$returnurl = new \core\url('/auth/musaml/management/idps.php');
+$cancelurl = new \core\url('/auth/musaml/management/idp.php', ['id' => $idp->id]);
+
+$form = new idp_delete($pageurl, $idp);
 
 if ($form->is_cancelled()) {
-    $form->ajax_form_cancelled(new \core\url('/auth/musaml/management/idp.php', ['id' => $idp->id]));
+    $handler->cancelled($cancelurl);
 }
-
 if ($data = $form->get_data()) {
     idp::delete($idp->id);
-    $form->ajax_form_submitted($returnurl);
+    $handler->submitted($returnurl);
 }
 
-$form->ajax_form_render();
+$title = get_string('idp_delete', 'auth_musaml');
+$PAGE->set_pagelayout('admin');
+$PAGE->set_title($title);
+$PAGE->set_heading($title);
+$handler->render($form);
