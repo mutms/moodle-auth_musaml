@@ -33,6 +33,7 @@ use auth_musaml\local\saml;
 /**
  * Provider classes test.
  *
+ * @group      MuTMS
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

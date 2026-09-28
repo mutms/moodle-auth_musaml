@@ -31,6 +31,7 @@ use auth_musaml\tests\keycloak_client;
  * Skipped unless the TEST_AUTH_MUSAML_KEYCLOAK_* constants are defined, see
  * docs/providers/keycloak.md.
  *
+ * @group      MuTMS
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
