@@ -103,6 +103,7 @@ It must never reach the file area, a log or a page.
 The short commands are [mpd](https://github.com/mutms/mpd)
 helpers in `/opt/mpd/assets/vm/project_types/moodle/bin`.
 They must be run from the project directory, because PHP is detected based on mpd.env file settings.
+In an mpd VM read `/opt/mpd/docs/moodle-agents.md` first: all the helpers by task, and what `mpd reset` destroys.
 
 | Task           | Command                          | Note                                                    |
 |----------------|----------------------------------|---------------------------------------------------------|
