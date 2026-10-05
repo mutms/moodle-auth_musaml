@@ -37,7 +37,9 @@ final class mapping {
      */
     public static function fetch_by_guid(int $idpid, string $guid): ?stdClass {
         global $DB;
-        $record = $DB->get_record('auth_musaml_user', ['idpid' => $idpid, 'guid' => $guid]);
+        // NOTE: guid must be compared as case and accent sensitive even with case insensitive MySQL collations.
+        $select = 'idpid = :idpid AND ' . $DB->sql_equal('guid', ':guid', true, true);
+        $record = $DB->get_record_select('auth_musaml_user', $select, ['idpid' => $idpid, 'guid' => $guid]);
         return $record ?: null;
     }
 
