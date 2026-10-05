@@ -6,9 +6,10 @@ Feature: SAML identity provider management
 
   Background:
     Given the auth_musaml service provider certificate exists
-    # Fixtures are downloaded from the test site itself, which is usually a private address.
+    # Fixtures are downloaded from the test site itself, which is usually a private address on a non-standard port.
     And the following config values are set as admin:
       | curlsecurityblockedhosts | |
+      | curlsecurityallowedport  | |
 
   Scenario: Admin adds an identity provider from metadata with provider detection
     Given I log in as "admin"

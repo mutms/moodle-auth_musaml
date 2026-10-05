@@ -135,6 +135,9 @@ jobs:
       - name: Behat features
         id: behat
         if: ${{ !cancelled() }}
+        # The built-in PHP web server needs more workers, the site downloads metadata fixtures from itself.
+        env:
+          PHP_CLI_SERVER_WORKERS: 4
         run: moodle-plugin-ci behat --profile chrome --scss-deprecations
 
       - name: Upload Behat Faildump
