@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // phpcs:disable moodle.Files.BoilerplateComment.CommentEndedTooSoon
+// phpcs:disable moodle.Files.LineLength.TooLong
 
 namespace auth_musaml\external;
 
@@ -40,8 +41,8 @@ final class delete_user_mapping extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'entityid' => new external_value(PARAM_RAW_TRIMMED, 'Identity provider entity ID'),
-            'guid' => new external_value(PARAM_RAW_TRIMMED, 'User id in the identity provider'),
+            'entityid' => new external_value(PARAM_RAW_TRIMMED, 'Identity provider entity ID', VALUE_REQUIRED, null, NULL_NOT_ALLOWED),
+            'guid' => new external_value(PARAM_RAW_TRIMMED, 'User id in the identity provider', VALUE_REQUIRED, null, NULL_NOT_ALLOWED),
         ]);
     }
 
