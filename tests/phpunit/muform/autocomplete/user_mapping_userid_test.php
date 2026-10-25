@@ -45,6 +45,7 @@ final class user_mapping_userid_test extends \advanced_testcase {
         $idp = $generator->create_idp(['name' => 'Some IDP']);
         $free = $this->getDataGenerator()->create_user(['firstname' => 'Free', 'lastname' => 'User']);
         $mapped = $this->getDataGenerator()->create_user(['firstname' => 'Mapped', 'lastname' => 'User']);
+        $suspended = $this->getDataGenerator()->create_user(['firstname' => 'Suspended', 'lastname' => 'User', 'suspended' => 1]);
         $generator->create_user_mapping(['idpid' => $idp->id, 'userid' => $mapped->id, 'guid' => 'guid-1']);
 
         $this->setAdminUser();
@@ -62,6 +63,10 @@ final class user_mapping_userid_test extends \advanced_testcase {
         $this->assertNull($source->validate((string)$free->id));
         $this->assertSame(get_string('error_usermapped', 'auth_musaml'), $source->validate((string)$mapped->id));
         $this->assertNull($source->label('999999'));
+
+        // Suspended users may be mapped too.
+        $this->assertArrayHasKey((string)$suspended->id, $results);
+        $this->assertNull($source->validate((string)$suspended->id));
     }
 
     public function test_unknown_idp(): void {
