@@ -63,35 +63,6 @@ final class mapping_import_test extends \advanced_testcase {
         return (object)array_merge($options, $extra);
     }
 
-    public function test_separator_is_detected(): void {
-        $expected = [['guid', 'email'], ['z-1', 'one@example.com']];
-
-        foreach (["\t", ',', ';', ':'] as $separator) {
-            $content = "guid{$separator}email\nz-1{$separator}one@example.com";
-            $rows = mapping_import::parse($content, 'UTF-8', mapping_import::DELIMITER_AUTO);
-            $this->assertSame($expected, $rows, 'separator ' . json_encode($separator));
-        }
-
-        // A chosen separator is used as it is, even when it reads the data as one column.
-        $rows = mapping_import::parse("guid\temail\nz-1\tone@example.com", 'UTF-8', 'comma');
-        $this->assertSame([["guid\temail"], ["z-1\tone@example.com"]], $rows);
-    }
-
-    public function test_parse(): void {
-        $rows = mapping_import::parse("guid,email\nz-1,one@example.com\nz-2,two@example.com", 'UTF-8', 'comma');
-        $this->assertSame([['guid', 'email'], ['z-1', 'one@example.com'], ['z-2', 'two@example.com']], $rows);
-
-        $rows = mapping_import::parse("guid;email\nz-1;one@example.com", 'UTF-8', 'semicolon');
-        $this->assertSame([['guid', 'email'], ['z-1', 'one@example.com']], $rows);
-
-        // Values are trimmed and quoting is honoured.
-        $rows = mapping_import::parse("guid,name\n z-1 ,\"Doe, Jane\"", 'UTF-8', 'comma');
-        $this->assertSame(['z-1', 'Doe, Jane'], $rows[1]);
-
-        $this->expectException(\core\exception\coding_exception::class);
-        mapping_import::parse('   ', 'UTF-8', 'comma');
-    }
-
     public function test_guess_columns(): void {
         $guesses = mapping_import::guess_columns(['GUID', 'E-mail', 'User name', 'ID number', 'Department']);
         $this->assertSame([
@@ -140,7 +111,8 @@ final class mapping_import_test extends \advanced_testcase {
         }
 
         // The source stage parses the pasted or uploaded text.
-        $csvdata = mapping_import::save_source("guid,email\nz-1,one@example.com", 'UTF-8', mapping_import::DELIMITER_AUTO);
+        $delimiter = \tool_mulib\local\import_util::DELIMITER_AUTO;
+        $csvdata = mapping_import::save_source("guid,email\nz-1,one@example.com", 'UTF-8', $delimiter);
         $this->assertSame($rows, $csvdata->rows);
         $this->assertFalse(mapping_import::is_source_stage($csvdata));
         $this->assertTrue(mapping_import::is_columns_stage($csvdata));

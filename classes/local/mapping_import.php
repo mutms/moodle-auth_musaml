@@ -33,9 +33,6 @@ use stdClass;
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class mapping_import {
-    /** @var string csv_import_reader type */
-    public const CSVTYPE = 'auth_musaml_user';
-
     /** @var int rows of the dry run preview table */
     public const PREVIEW_ROWS = 10;
 
@@ -44,9 +41,6 @@ final class mapping_import {
 
     /** @var string column is not used */
     public const COLUMN_IGNORE = '';
-
-    /** @var string separator value that means the plugin works it out */
-    public const DELIMITER_AUTO = 'auto';
 
     /** @var string column holds the identity provider account id */
     public const COLUMN_GUID = 'guid';
@@ -304,7 +298,7 @@ final class mapping_import {
      * @return stdClass keys: rows, columns, options
      */
     public static function save_source(string $content, string $encoding, string $delimitername): stdClass {
-        $rows = self::parse($content, $encoding, $delimitername);
+        $rows = \tool_mulib\local\import_util::parse($content, $encoding, $delimitername);
         return self::validate(['rows' => $rows]);
     }
 
@@ -345,76 +339,6 @@ final class mapping_import {
         return $csvdata;
     }
 
-    /**
-     * Parse CSV text into rows.
-     *
-     * @param string $content
-     * @param string $encoding
-     * @param string $delimitername separator name, or "auto" to detect it
-     * @return array first row holds the column headers
-     * @throws coding_exception when the text cannot be parsed
-     */
-    public static function parse(string $content, string $encoding, string $delimitername): array {
-        if ($delimitername !== self::DELIMITER_AUTO) {
-            return self::parse_with($content, $encoding, $delimitername);
-        }
-
-        // A spreadsheet copies and saves columns separated by tabs, and none of these
-        // characters appears inside a user id or an email address, so the first
-        // separator that yields more than one column is the right one.
-        $rows = [];
-        foreach (['comma', 'tab', 'semicolon', 'colon'] as $candidate) {
-            $rows = self::parse_with($content, $encoding, $candidate);
-            if (count(reset($rows)) > 1) {
-                return $rows;
-            }
-        }
-
-        return $rows;
-    }
-
-    /**
-     * Parse the text with one given separator.
-     *
-     * @param string $content
-     * @param string $encoding
-     * @param string $delimitername
-     * @return array first row holds the column headers
-     * @throws coding_exception when the text cannot be parsed
-     */
-    private static function parse_with(string $content, string $encoding, string $delimitername): array {
-        global $CFG;
-        require_once($CFG->libdir . '/csvlib.class.php');
-
-        $content = trim($content);
-        if ($content === '') {
-            throw new coding_exception(get_string('import_error_empty', 'auth_musaml'));
-        }
-
-        $iid = \csv_import_reader::get_new_iid(self::CSVTYPE);
-        $cir = new \csv_import_reader($iid, self::CSVTYPE);
-        $readcount = $cir->load_csv_content($content, $encoding, $delimitername);
-        $columns = $cir->get_columns();
-        $error = $cir->get_error();
-        if ($error !== null) {
-            $cir->cleanup(true);
-            throw new coding_exception($error);
-        }
-        if (!$readcount || !$columns) {
-            $cir->cleanup(true);
-            throw new coding_exception(get_string('import_error_empty', 'auth_musaml'));
-        }
-
-        $rows = [array_map('trim', $columns)];
-        $cir->init();
-        while ($line = $cir->next()) {
-            $rows[] = array_map('trim', $line);
-        }
-        $cir->close();
-        $cir->cleanup(true);
-
-        return $rows;
-    }
 
     /**
      * Check one row and work out what would happen to it.
