@@ -76,7 +76,8 @@ Change these only with the maintainer.
   what the class does, what to set in the product, and which quirk each tweak answers.
   A fix every site of one product needs belongs in its provider class, not in custom
   library settings.
-- Strings live in `lang/en` in alphabetical order.
+- Strings live in `lang/en` and `lang/cs` in alphabetical order; add both. Translations follow
+  `admin/tool/mulib/docs/translations.md`.
 - Wording: the remote side is an "identity provider account", the local side is a "user",
   and "user account" only where the text is about creating, suspending or switching the
   login itself. Messages shown to the person say "your account".
