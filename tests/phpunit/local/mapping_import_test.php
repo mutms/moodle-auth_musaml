@@ -108,15 +108,15 @@ final class mapping_import_test extends \advanced_testcase {
             $this->assertSame([], $csvdata->rows);
             $this->assertSame([], $csvdata->columns);
             $this->assertSame([], $csvdata->options);
-            $this->assertTrue(mapping_import::is_source_stage($csvdata));
+            $this->assertFalse(mapping_import::is_source_valid($csvdata));
         }
 
         // The source stage parses the pasted or uploaded text.
         $delimiter = \tool_mulib\local\import_util::DELIMITER_AUTO;
         $csvdata = mapping_import::save_source("guid,email\nz-1,one@example.com", 'UTF-8', $delimiter);
         $this->assertSame($rows, $csvdata->rows);
-        $this->assertFalse(mapping_import::is_source_stage($csvdata));
-        $this->assertTrue(mapping_import::is_columns_stage($csvdata));
+        $this->assertTrue(mapping_import::is_source_valid($csvdata));
+        $this->assertFalse(mapping_import::is_columns_valid($csvdata));
         // The state survives the JSON round trip of the wizard storage.
         $this->assertEquals($csvdata, mapping_import::validate(json_decode(json_encode($csvdata), true)));
 
@@ -124,15 +124,15 @@ final class mapping_import_test extends \advanced_testcase {
         $csvdata = mapping_import::save_columns($csvdata, (object)['headers' => 1,
             'column_0' => mapping_import::COLUMN_GUID, 'column_1' => 'email']);
         $this->assertSame($columns, $csvdata->columns);
-        $this->assertFalse(mapping_import::is_columns_stage($csvdata));
-        $this->assertTrue(mapping_import::is_options_stage($csvdata));
+        $this->assertTrue(mapping_import::is_columns_valid($csvdata));
+        $this->assertFalse(mapping_import::is_options_valid($csvdata));
 
         // Confirmed options have to be confirmed again after the columns changed.
         $csvdata = mapping_import::save_options($csvdata, (object)['setauth' => 1]);
-        $this->assertFalse(mapping_import::is_options_stage($csvdata));
+        $this->assertTrue(mapping_import::is_options_valid($csvdata));
         $csvdata = mapping_import::save_columns($csvdata, (object)['headers' => 1,
             'column_0' => mapping_import::COLUMN_GUID, 'column_1' => 'email']);
-        $this->assertTrue(mapping_import::is_options_stage($csvdata));
+        $this->assertFalse(mapping_import::is_options_valid($csvdata));
         $this->assertSame(1, $csvdata->options['setauth']);
     }
 
@@ -146,9 +146,9 @@ final class mapping_import_test extends \advanced_testcase {
 
         // Everything else was answered already, only the options page is left, and the
         // options of the document are the defaults of its form.
-        $this->assertFalse(mapping_import::is_source_stage($csvdata));
-        $this->assertFalse(mapping_import::is_columns_stage($csvdata));
-        $this->assertTrue(mapping_import::is_options_stage($csvdata));
+        $this->assertTrue(mapping_import::is_source_valid($csvdata));
+        $this->assertTrue(mapping_import::is_columns_valid($csvdata));
+        $this->assertFalse(mapping_import::is_options_valid($csvdata));
         $this->assertSame(['setauth' => 1], $csvdata->options);
 
         // Confirming the options ends the questions, the import may run.
@@ -156,15 +156,15 @@ final class mapping_import_test extends \advanced_testcase {
         $csvdata = mapping_import::save_options($csvdata, $formdata);
 
         $this->assertFalse($csvdata->options['preview']);
-        $this->assertFalse(mapping_import::is_options_stage($csvdata));
-        $this->assertFalse(mapping_import::is_options_stage(mapping_import::validate(json_decode(json_encode($csvdata), true))));
+        $this->assertTrue(mapping_import::is_options_valid($csvdata));
+        $this->assertTrue(mapping_import::is_options_valid(mapping_import::validate(json_decode(json_encode($csvdata), true))));
 
         // A document that claims the options were confirmed must answer all of them.
         foreach (mapping_import::get_option_names() as $name) {
             $partial = clone($csvdata);
             $partial->options = $csvdata->options;
             unset($partial->options[$name]);
-            $this->assertTrue(mapping_import::is_options_stage($partial), $name);
+            $this->assertFalse(mapping_import::is_options_valid($partial), $name);
         }
     }
 

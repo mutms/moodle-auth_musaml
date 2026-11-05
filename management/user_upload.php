@@ -59,9 +59,14 @@ $returnurl = new \core\url('/auth/musaml/management/users.php', ['id' => $idp->i
 
 // The state belongs to this identity provider, it cannot be replayed against another one.
 $wizardname = 'auth_musaml_user_upload:' . $idp->id;
-$wizard = wizard::load($wizardname, optional_param(wizard::PARAM, 0, PARAM_INT));
+$stages = [
+    'source' => get_string('import', 'auth_musaml'),
+    'columns' => get_string('import_columns', 'auth_musaml'),
+    'options' => get_string('import_options', 'auth_musaml'),
+];
+$wizard = wizard::load($wizardname, $stages);
 if (!$wizard) {
-    $wizard = wizard::start($wizardname);
+    $wizard = wizard::start($wizardname, $stages);
     redirect($wizard->get_url($pageurl));
 }
 
@@ -70,21 +75,16 @@ $state = $wizard->get_data();
 $csvdata = mapping_import::validate($state);
 $source = is_array($state['source'] ?? null) ? $state['source'] : [];
 
-$labels = [
-    'source' => get_string('import', 'auth_musaml'),
-    'columns' => get_string('import_columns', 'auth_musaml'),
-    'options' => get_string('import_options', 'auth_musaml'),
-];
-$isvalid = fn(string $stage): bool => match ($stage) {
-    'source' => !mapping_import::is_source_stage($csvdata),
-    'columns' => !mapping_import::is_columns_stage($csvdata),
-    'options' => !mapping_import::is_options_stage($csvdata),
+$isvalid = function (string $stage) use ($csvdata): bool {
+    return match ($stage) {
+        'source' => mapping_import::is_source_valid($csvdata),
+        'columns' => mapping_import::is_columns_valid($csvdata),
+        'options' => mapping_import::is_options_valid($csvdata),
+    };
 };
-$requested = optional_param(wizard::STAGE_PARAM, null, PARAM_ALPHA);
-$stages = wizard::resolve_stages($labels, $isvalid, $requested);
-$stage = wizard::current_stage($stages);
+$stage = $wizard->resolve_stages($isvalid);
 
-if ($requested === null && $isvalid('options')) {
+if ($wizard->is_finished()) {
     // Everything was answered, write the mappings.
     $counts = mapping_import::import($idp, $csvdata, (object)$csvdata->options);
     $wizard->delete();
@@ -117,8 +117,8 @@ if ($form->is_cancelled()) {
     $wizard->delete();
     redirect($returnurl);
 }
-if ($stage !== 'source' && $form->is_reloaded() && $form->get_element('back')->get_value()) {
-    redirect($wizard->get_url($pageurl, $stage === 'options' ? 'columns' : 'source'));
+if ($form->is_reloaded() && $wizard->get_previous_stage() !== null && $form->get_element('back')->get_value()) {
+    redirect($wizard->get_url($pageurl, $wizard->get_previous_stage()));
 }
 if ($data = $form->get_data()) {
     if ($stage === 'source') {
@@ -134,11 +134,11 @@ if ($data = $form->get_data()) {
     } else {
         $csvdata = mapping_import::save_options($csvdata, $data);
     }
-    $wizard->set_data((array)$csvdata + ['source' => $source]);
+    $wizard->complete_stage($stage, (array)$csvdata + ['source' => $source]);
     redirect($wizard->get_url($pageurl));
 }
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading($labels[$stage], 2, 'mb-3');
-echo $wizard->render($OUTPUT, $stages, $pageurl, $form);
+echo $OUTPUT->heading($stages[$stage], 2, 'mb-3');
+echo $wizard->render($OUTPUT, $pageurl, $form);
 echo $OUTPUT->footer();
