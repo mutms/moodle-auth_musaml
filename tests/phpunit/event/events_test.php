@@ -25,23 +25,24 @@ use auth_musaml\local\idp;
 use auth_musaml\local\login;
 use auth_musaml\local\mapping;
 use auth_musaml\local\saml;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Plugin events test.
  *
- * @group      MuTMS
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- *
- * @covers \auth_musaml\event\idp_created
- * @covers \auth_musaml\event\idp_updated
- * @covers \auth_musaml\event\idp_deleted
- * @covers \auth_musaml\event\login_failed
- * @covers \auth_musaml\event\user_mapping_created
- * @covers \auth_musaml\event\user_mapping_deleted
- * @covers \auth_musaml\event\metadata_refresh_failed
  */
+#[CoversClass(\auth_musaml\event\idp_created::class)]
+#[CoversClass(\auth_musaml\event\idp_updated::class)]
+#[CoversClass(\auth_musaml\event\idp_deleted::class)]
+#[CoversClass(\auth_musaml\event\login_failed::class)]
+#[CoversClass(\auth_musaml\event\user_mapping_created::class)]
+#[CoversClass(\auth_musaml\event\user_mapping_deleted::class)]
+#[CoversClass(\auth_musaml\event\metadata_refresh_failed::class)]
+#[Group('MuTMS')]
 final class events_test extends \advanced_testcase {
     public function setUp(): void {
         parent::setUp();

@@ -24,6 +24,8 @@ use auth_musaml\local\idp;
 use auth_musaml\local\provider\keycloak;
 use auth_musaml\local\saml;
 use auth_musaml\tests\keycloak_client;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Tests against a real Keycloak instance.
@@ -31,13 +33,12 @@ use auth_musaml\tests\keycloak_client;
  * Skipped unless the TEST_AUTH_MUSAML_KEYCLOAK_* constants are defined, see
  * docs/providers/keycloak.md.
  *
- * @group      MuTMS
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- *
- * @covers \auth_musaml\local\provider\keycloak
  */
+#[CoversClass(\auth_musaml\local\provider\keycloak::class)]
+#[Group('MuTMS')]
 final class keycloak_test extends \advanced_testcase {
     public function setUp(): void {
         parent::setUp();

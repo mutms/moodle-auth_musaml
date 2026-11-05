@@ -29,19 +29,21 @@ use auth_musaml\local\provider\keycloak;
 use auth_musaml\local\provider\okta;
 use auth_musaml\local\provider\zitadel;
 use auth_musaml\local\saml;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Provider classes test.
  *
- * @group      MuTMS
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- *
- * @covers \auth_musaml\local\provider\base
- * @covers \auth_musaml\local\provider\generic
- * @covers \auth_musaml\local\provider\zitadel
  */
+#[CoversClass(\auth_musaml\local\provider\base::class)]
+#[CoversClass(\auth_musaml\local\provider\generic::class)]
+#[CoversClass(\auth_musaml\local\provider\zitadel::class)]
+#[Group('MuTMS')]
 final class provider_test extends \advanced_testcase {
     public function setUp(): void {
         parent::setUp();
@@ -152,13 +154,12 @@ final class provider_test extends \advanced_testcase {
     }
 
     /**
-     * @dataProvider fixture_provider
-     *
      * @param string $fixture
      * @param string $expected provider class
      * @param string $entityid
      * @param bool $haslogout
      */
+    #[DataProvider('fixture_provider')]
     public function test_real_metadata_of_known_products(
         string $fixture,
         string $expected,
@@ -186,11 +187,11 @@ final class provider_test extends \advanced_testcase {
     }
 
     /**
-     * @dataProvider detection_provider
      * @param string $expected
      * @param string $entityid
      * @param string $ssourl
      */
+    #[DataProvider('detection_provider')]
     public function test_detection_of_known_products(string $expected, string $entityid, string $ssourl): void {
         $metadata = $this->get_metadata($entityid, $ssourl);
         $this->assertSame($expected, base::detect_class($metadata));

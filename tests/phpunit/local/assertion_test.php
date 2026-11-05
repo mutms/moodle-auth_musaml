@@ -21,17 +21,18 @@
 namespace auth_musaml\phpunit\local;
 
 use auth_musaml\local\assertion;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Replay protection test.
  *
- * @group      MuTMS
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- *
- * @covers \auth_musaml\local\assertion
  */
+#[CoversClass(\auth_musaml\local\assertion::class)]
+#[Group('MuTMS')]
 final class assertion_test extends \advanced_testcase {
     public function setUp(): void {
         parent::setUp();

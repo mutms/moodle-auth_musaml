@@ -23,18 +23,19 @@ namespace auth_musaml\phpunit\external;
 use auth_musaml\external\create_user_mapping;
 use auth_musaml\external\delete_user_mapping;
 use auth_musaml\local\mapping;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Mapping web services test.
  *
- * @group      MuTMS
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- *
- * @covers \auth_musaml\external\create_user_mapping
- * @covers \auth_musaml\external\delete_user_mapping
  */
+#[CoversClass(\auth_musaml\external\create_user_mapping::class)]
+#[CoversClass(\auth_musaml\external\delete_user_mapping::class)]
+#[Group('MuTMS')]
 final class mapping_test extends \advanced_testcase {
     public function setUp(): void {
         parent::setUp();

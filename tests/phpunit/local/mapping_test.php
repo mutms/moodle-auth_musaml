@@ -21,17 +21,18 @@
 namespace auth_musaml\phpunit\local;
 
 use auth_musaml\local\mapping;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * User mapping test.
  *
- * @group      MuTMS
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- *
- * @covers \auth_musaml\local\mapping
  */
+#[CoversClass(\auth_musaml\local\mapping::class)]
+#[Group('MuTMS')]
 final class mapping_test extends \advanced_testcase {
     public function setUp(): void {
         parent::setUp();

@@ -25,17 +25,18 @@ use auth_musaml\local\idp;
 use auth_musaml\local\login;
 use auth_musaml\local\mapping;
 use auth_musaml\local\saml;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Login helper test.
  *
- * @group      MuTMS
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- *
- * @covers \auth_musaml\local\login
  */
+#[CoversClass(\auth_musaml\local\login::class)]
+#[Group('MuTMS')]
 final class login_test extends \advanced_testcase {
     public function setUp(): void {
         parent::setUp();

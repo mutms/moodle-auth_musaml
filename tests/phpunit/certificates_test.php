@@ -25,18 +25,19 @@ use auth_musaml\local\idp;
 use auth_musaml\local\openssl;
 use auth_musaml\local\saml;
 use core\check\result;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Certificate check and certificate management test.
  *
- * @group      MuTMS
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- *
- * @covers \auth_musaml\check\certificates
- * @covers \auth_musaml\local\idp
  */
+#[CoversClass(\auth_musaml\check\certificates::class)]
+#[CoversClass(\auth_musaml\local\idp::class)]
+#[Group('MuTMS')]
 final class certificates_test extends \advanced_testcase {
     public function setUp(): void {
         parent::setUp();

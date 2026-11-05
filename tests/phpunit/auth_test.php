@@ -20,16 +20,18 @@
 
 namespace auth_musaml\phpunit;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
+
 /**
  * Auth plugin class test.
  *
- * @group      MuTMS
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- *
- * @covers \auth_plugin_musaml
  */
+#[CoversClass(\auth_plugin_musaml::class)]
+#[Group('MuTMS')]
 final class auth_test extends \advanced_testcase {
     public function setUp(): void {
         parent::setUp();

@@ -24,17 +24,18 @@ use auth_musaml\local\idp;
 use auth_musaml\local\provider\zitadel;
 use auth_musaml\local\saml;
 use auth_musaml\tests\zitadel_client;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Tests against the Zitadel test instance, skipped unless TEST_AUTH_MUSAML_ZITADEL_* constants are set.
  *
- * @group      MuTMS
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- *
- * @covers \auth_musaml\local\idp
  */
+#[CoversClass(\auth_musaml\local\idp::class)]
+#[Group('MuTMS')]
 final class zitadel_test extends \advanced_testcase {
     public function setUp(): void {
         parent::setUp();

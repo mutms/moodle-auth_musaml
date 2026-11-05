@@ -21,17 +21,18 @@
 namespace auth_musaml\phpunit\local;
 
 use auth_musaml\local\openssl;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Openssl helper test.
  *
- * @group      MuTMS
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- *
- * @covers \auth_musaml\local\openssl
  */
+#[CoversClass(\auth_musaml\local\openssl::class)]
+#[Group('MuTMS')]
 final class openssl_test extends \basic_testcase {
     public function test_key_and_self_signed_cert_round_trip(): void {
         $key = openssl::generate_key();
