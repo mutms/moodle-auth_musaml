@@ -80,7 +80,7 @@ final class certificates_test extends \advanced_testcase {
         $this->set_idp_expiry($idp, time() + 2 * WEEKSECS);
         $result = $check->get_result();
         $this->assertSame(result::WARNING, $result->get_status());
-        $this->assertStringContainsString('expires in', $result->get_summary());
+        $this->assertStringContainsString('expires soon, in', $result->get_summary());
 
         $this->set_idp_expiry($idp, time() + 2 * DAYSECS);
         $this->assertSame(result::ERROR, $check->get_result()->get_status());
