@@ -56,19 +56,19 @@ final class user_mapping_userid extends \tool_mulib\muform\autocomplete\base {
     }
 
     #[\Override]
-    public function search(string $query, int $maxitems): ?array {
+    public function search(string $query, int $maxitems, array $exclude): ?array {
         // A user may have only one mapping, mapped users are not offered at all.
         $where = new sql("NOT EXISTS (SELECT 1 FROM {auth_musaml_user} m WHERE m.userid = u.id)");
         return $this->search_users(context\system::instance(), $query, $maxitems, [], $where);
     }
 
     #[\Override]
-    public function label(string $value): ?string {
+    protected function label_value(string $value): ?string {
         return $this->user_labels(context\system::instance(), [$value])[$value] ?? null;
     }
 
     #[\Override]
-    public function validate(string $value): ?string {
+    protected function validate_value(string $value): ?string {
         if (mapping::fetch_by_userid((int)$value)) {
             return get_string('error_usermapped', 'auth_musaml');
         }

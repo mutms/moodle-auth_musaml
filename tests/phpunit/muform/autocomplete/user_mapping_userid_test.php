@@ -54,20 +54,25 @@ final class user_mapping_userid_test extends \advanced_testcase {
         $this->assertSame([(int)$idp->id], $source->get_args());
 
         // Mapped users are never offered.
-        $results = $source->search('User', 50);
+        $results = $source->search('User', 50, []);
         $this->assertArrayHasKey((string)$free->id, $results);
         $this->assertArrayNotHasKey((string)$mapped->id, $results);
 
         // Labels exist for both, validation explains why a mapped user cannot be picked.
-        $this->assertNotNull($source->label((string)$free->id));
-        $this->assertNotNull($source->label((string)$mapped->id));
-        $this->assertNull($source->validate((string)$free->id));
-        $this->assertSame(get_string('error_usermapped', 'auth_musaml'), $source->validate((string)$mapped->id));
-        $this->assertNull($source->label('999999'));
+        $value = (string)$free->id;
+        $this->assertNotNull($source->labels([$value])[$value] ?? null);
+        $value = (string)$mapped->id;
+        $this->assertNotNull($source->labels([$value])[$value] ?? null);
+        $value = (string)$free->id;
+        $this->assertNull($source->validate([$value])[$value] ?? null);
+        $value = (string)$mapped->id;
+        $this->assertSame(get_string('error_usermapped', 'auth_musaml'), $source->validate([$value])[$value] ?? null);
+        $this->assertNull($source->labels(['999999'])['999999'] ?? null);
 
         // Suspended users may be mapped too.
         $this->assertArrayHasKey((string)$suspended->id, $results);
-        $this->assertNull($source->validate((string)$suspended->id));
+        $value = (string)$suspended->id;
+        $this->assertNull($source->validate([$value])[$value] ?? null);
     }
 
     public function test_unknown_idp(): void {
