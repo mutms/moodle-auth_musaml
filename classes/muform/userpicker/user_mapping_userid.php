@@ -16,13 +16,11 @@
 
 // phpcs:disable moodle.Files.BoilerplateComment.CommentEndedTooSoon
 
-namespace auth_musaml\muform\autocomplete;
+namespace auth_musaml\muform\userpicker;
 
 use auth_musaml\local\idp;
 use auth_musaml\local\mapping;
-use core\context;
 use tool_mulib\local\sql;
-use tool_mulib\muform\util\autocomplete\user_trait;
 
 /**
  * Candidates for a new user mapping of one identity provider.
@@ -31,9 +29,7 @@ use tool_mulib\muform\util\autocomplete\user_trait;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class user_mapping_userid extends \tool_mulib\muform\autocomplete\base {
-    use user_trait;
-
+final class user_mapping_userid extends \tool_mulib\muform\userpicker\base {
     /** @var int identity provider id */
     private int $idpid;
 
@@ -56,22 +52,34 @@ final class user_mapping_userid extends \tool_mulib\muform\autocomplete\base {
     }
 
     #[\Override]
-    public function search(string $query, int $maxitems, array $exclude): ?array {
+    protected function get_context(): \core\context {
+        return \core\context\system::instance();
+    }
+
+    #[\Override]
+    protected function get_candidates_sql(): ?sql {
         // A user may have only one mapping, mapped users are not offered at all.
-        $where = new sql("NOT EXISTS (SELECT 1 FROM {auth_musaml_user} m WHERE m.userid = u.id)");
-        return $this->search_users(context\system::instance(), $query, $maxitems, [], $where);
+        return new sql("NOT EXISTS (SELECT 1 FROM {auth_musaml_user} m WHERE m.userid = u.id)");
     }
 
+    /**
+     * Any user may be submitted, mapped users are refused with a reason in validation.
+     *
+     * @return sql|null
+     */
     #[\Override]
-    protected function label_value(string $value): ?string {
-        return $this->user_labels(context\system::instance(), [$value])[$value] ?? null;
-    }
-
-    #[\Override]
-    protected function validate_value(string $value): ?string {
-        if (mapping::fetch_by_userid((int)$value)) {
-            return get_string('error_usermapped', 'auth_musaml');
-        }
+    protected function get_selected_sql(): ?sql {
         return null;
+    }
+
+    #[\Override]
+    public function validate(array $values): array {
+        $errors = parent::validate($values);
+        foreach ($values as $value) {
+            if (mapping::fetch_by_userid((int)$value)) {
+                $errors[(string)$value] = get_string('error_usermapped', 'auth_musaml');
+            }
+        }
+        return $errors;
     }
 }

@@ -19,14 +19,14 @@
 namespace auth_musaml\local\form;
 
 use auth_musaml\local\mapping;
-use auth_musaml\muform\autocomplete\user_mapping_userid;
-use tool_mulib\muform\element\autocomplete;
+use auth_musaml\muform\userpicker\user_mapping_userid;
 use tool_mulib\muform\element\buttons;
 use tool_mulib\muform\element\cancel;
 use tool_mulib\muform\element\checkbox;
 use tool_mulib\muform\element\hidden;
 use tool_mulib\muform\element\submit;
 use tool_mulib\muform\element\text;
+use tool_mulib\muform\element\userpicker;
 use tool_mulib\muform\form;
 
 /**
@@ -44,7 +44,7 @@ final class user_create extends form {
         $this->add(new hidden('idpid'));
 
         $source = new user_mapping_userid((int)$idp->id);
-        $userid = (new autocomplete('userid', get_string('user_mapping_user', 'auth_musaml'), $source))
+        $userid = (new userpicker('userid', get_string('user_mapping_user', 'auth_musaml'), $source))
             ->set_required(true)
             ->add_help_button('user_mapping_user', 'auth_musaml');
         $this->add($userid);
