@@ -16,32 +16,41 @@
 
 // phpcs:disable moodle.Files.BoilerplateComment.CommentEndedTooSoon
 
-namespace auth_musaml\local\form;
+namespace auth_musaml\local\wizard\user_upload;
 
 use auth_musaml\local\mapping_import;
 use tool_mulib\muform\element\buttons;
 use tool_mulib\muform\element\cancel;
 use tool_mulib\muform\element\info;
-use tool_mulib\muform\element\submit;
+use tool_mulib\muform\element\inforawhtml;
+use tool_mulib\muform\element\wizardcontinue;
 use tool_mulib\muform\form;
 
 /**
  * Mapping import, stage one: where the CSV data comes from.
  *
+ * The stage is locked once completed, extra data 'rows' then shows the read data instead.
+ *
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class user_upload_source extends form {
+final class source extends form {
     use \tool_mulib\muform\util\import_source_trait;
 
     #[\Override]
     protected function definition(): void {
-        $this->add(new info('info', '', get_string('import_source_info', 'auth_musaml')));
-        $this->add_import_source_elements();
+        $rows = $this->get_extra_data()['rows'] ?? null;
+        if ($rows !== null) {
+            $this->add(new info('info', '', get_string('import_source_locked', 'tool_mulib', count($rows))));
+            $this->add(new inforawhtml('datapreview', '', columns::render_data($rows)));
+        } else {
+            $this->add(new info('info', '', get_string('import_source_info', 'auth_musaml')));
+            $this->add_import_source_elements();
+        }
 
         $this->add(new buttons('buttons'));
-        $this->add(new submit('submit', get_string('continue')), 'buttons');
+        $this->add(new wizardcontinue(), 'buttons');
         $this->add(new cancel(), 'buttons');
     }
 
@@ -56,6 +65,10 @@ final class user_upload_source extends form {
 
     #[\Override]
     protected function validation(array $data, array &$allerrors): void {
+        if (isset($this->get_extra_data()['rows'])) {
+            // Locked, nothing is submitted.
+            return;
+        }
         // Only a check, the page stores what the import needs.
         $rows = $this->validate_import_source($data, $allerrors);
         if ($rows === null) {

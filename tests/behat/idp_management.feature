@@ -208,6 +208,13 @@ Feature: SAML identity provider management
     Then I should see "4 rows were read"
     And the following muform fields match:
       | headers | 1 |
+    # The read data cannot be changed any more.
+    When I press "Back"
+    Then I should see "4 rows were read. Cancel the wizard to use different data."
+    And "textarea[name='csvtext']" "css_element" should not exist
+    When I press "Continue"
+    Then the following muform fields match:
+      | headers | 1 |
     And I press "Continue"
     # The options page previews what the import would do right now.
     Then I should see "Import options"

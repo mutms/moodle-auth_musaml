@@ -16,7 +16,7 @@
 
 // phpcs:disable moodle.Files.BoilerplateComment.CommentEndedTooSoon
 
-namespace auth_musaml\local\form;
+namespace auth_musaml\local\wizard\user_upload;
 
 use auth_musaml\local\mapping_import;
 use tool_mulib\muform\element\buttons;
@@ -24,9 +24,9 @@ use tool_mulib\muform\element\cancel;
 use tool_mulib\muform\element\checkbox;
 use tool_mulib\muform\element\info;
 use tool_mulib\muform\element\inforawhtml;
-use tool_mulib\muform\element\reload;
 use tool_mulib\muform\element\select;
-use tool_mulib\muform\element\submit;
+use tool_mulib\muform\element\wizardback;
+use tool_mulib\muform\element\wizardcontinue;
 use tool_mulib\muform\form;
 
 /**
@@ -36,14 +36,14 @@ use tool_mulib\muform\form;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class user_upload_columns extends form {
+final class columns extends form {
     #[\Override]
     protected function definition(): void {
         $rows = $this->get_extra_data()['rows'];
         $first = $rows[0];
 
         $this->add(new info('info', '', get_string('import_columns_info', 'auth_musaml', count($rows))));
-        $this->add(new inforawhtml('datapreview', '', $this->render_data($rows)));
+        $this->add(new inforawhtml('datapreview', '', self::render_data($rows)));
 
         // Guesses are only defaults, coming back to this stage shows what was chosen before.
         $headers = (new checkbox('headers', get_string('import_columns_headers', 'auth_musaml')))
@@ -60,18 +60,18 @@ final class user_upload_columns extends form {
         }
 
         $this->add(new buttons('buttons'));
-        $this->add(new submit('submit', get_string('continue')), 'buttons');
-        $this->add(new reload('back', get_string('muform_back', 'tool_mulib')), 'buttons');
+        $this->add(new wizardcontinue(), 'buttons');
+        $this->add(new wizardback(), 'buttons');
         $this->add(new cancel(), 'buttons');
     }
 
     /**
-     * First rows of the data as they were read.
+     * First rows of the data as they were read, also shown by the locked source stage.
      *
      * @param array $rows
      * @return string html
      */
-    private function render_data(array $rows): string {
+    public static function render_data(array $rows): string {
         $table = new \html_table();
         $table->attributes['class'] = 'generaltable mb-0';
         foreach (array_keys($rows[0]) as $index) {
