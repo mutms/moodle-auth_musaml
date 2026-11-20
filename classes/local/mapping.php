@@ -158,6 +158,25 @@ final class mapping {
     }
 
     /**
+     * May the user be mapped to an account of this identity provider?
+     *
+     * Identity providers of the whole site map anybody, a tenant identity provider maps
+     * members of its tenant only.
+     *
+     * @param stdClass $idp
+     * @param int $userid
+     * @return bool
+     */
+    public static function is_user_allowed_for_idp(stdClass $idp, int $userid): bool {
+        global $DB;
+
+        if (!$idp->tenantid || !\tool_mulib\local\mulib::is_mutenancy_active()) {
+            return true;
+        }
+        return $DB->get_field('user', 'tenantid', ['id' => $userid]) == $idp->tenantid;
+    }
+
+    /**
      * May the current user manage the mapping of this user?
      *
      * A mapping decides who may log in as the user, so site administrators are managed

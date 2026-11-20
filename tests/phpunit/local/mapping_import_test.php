@@ -302,6 +302,28 @@ final class mapping_import_test extends \advanced_testcase {
         $this->assertSame(mapping_import::RESULT_CREATED, $outcome->result);
     }
 
+    public function test_check_refuses_non_members_for_tenant_idp(): void {
+        if (!\tool_mulib\local\mulib::is_mutenancy_available()) {
+            $this->markTestSkipped('tool_mutenancy is not installed');
+        }
+        /** @var \tool_mutenancy_generator $tenancygen */
+        $tenancygen = $this->getDataGenerator()->get_plugin_generator('tool_mutenancy');
+        $tenant = $tenancygen->create_tenant();
+        $idp = $this->get_generator()->create_idp(['tenantid' => $tenant->id]);
+        $this->getDataGenerator()->create_user(['auth' => 'musaml', 'username' => 'member', 'tenantid' => $tenant->id]);
+        $this->getDataGenerator()->create_user(['auth' => 'musaml', 'username' => 'outsider']);
+        $columns = [0 => mapping_import::COLUMN_GUID, 1 => 'username'];
+        $rows = [['guid', 'username'], ['z-1', 'member'], ['z-2', 'outsider']];
+
+        $outcomes = mapping_import::check($idp, $this->csvdata($rows, $columns), $this->get_options(false));
+        $this->assertSame(mapping_import::RESULT_CREATED, $outcomes[0]->result);
+        $this->assertSame(mapping_import::RESULT_ERROR, $outcomes[1]->result);
+        $this->assertStringContainsString('not a member of the tenant', $outcomes[1]->message);
+
+        $outcomes = mapping_import::check($idp, $this->csvdata($rows, $columns), $this->get_options(true));
+        $this->assertSame(mapping_import::RESULT_SKIPPED, $outcomes[1]->result);
+    }
+
     public function test_check_requires_all_identifiers_to_agree(): void {
         $gen = $this->get_generator();
         $idp = $gen->create_idp();

@@ -91,6 +91,24 @@ final class mapping_test extends \advanced_testcase {
         $this->assertSame('musaml', \core\user::get_user($user->id)->auth);
     }
 
+    public function test_tenant_identity_provider_maps_tenant_members_only(): void {
+        if (!\tool_mulib\local\mulib::is_mutenancy_available()) {
+            $this->markTestSkipped('tool_mutenancy is not installed');
+        }
+        /** @var \tool_mutenancy_generator $tenancygen */
+        $tenancygen = $this->getDataGenerator()->get_plugin_generator('tool_mutenancy');
+        $tenant = $tenancygen->create_tenant();
+        $gen = $this->getDataGenerator()->get_plugin_generator('auth_musaml');
+        $idp = $gen->create_idp(['tenantid' => $tenant->id]);
+        $member = $this->getDataGenerator()->create_user(['tenantid' => $tenant->id]);
+        $global = $this->getDataGenerator()->create_user();
+        $this->setUser($this->create_manager());
+
+        create_user_mapping::execute($idp->entityid, 'z-1', $member->id);
+        $this->expectException(\core\exception\invalid_parameter_exception::class);
+        create_user_mapping::execute($idp->entityid, 'z-2', $global->id);
+    }
+
     public function test_capability_is_required(): void {
         $gen = $this->getDataGenerator()->get_plugin_generator('auth_musaml');
         $idp = $gen->create_idp();

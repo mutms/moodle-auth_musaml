@@ -143,6 +143,30 @@ final class login_test extends \advanced_testcase {
         $this->assertTrue(login::is_idp_available($siteidp), 'site wide identity providers stay');
     }
 
+    public function test_mapping_of_non_member_is_ignored_by_tenant_idp(): void {
+        if (!\tool_mulib\local\mulib::is_mutenancy_available()) {
+            $this->markTestSkipped('tool_mutenancy is not installed');
+        }
+        /** @var \tool_mutenancy_generator $tenancygen */
+        $tenancygen = $this->getDataGenerator()->get_plugin_generator('tool_mutenancy');
+        $tenant = $tenancygen->create_tenant();
+        $gen = $this->get_generator();
+        $idp = $gen->create_idp(['tenantid' => $tenant->id]);
+        $member = $this->getDataGenerator()->create_user(['auth' => 'musaml', 'tenantid' => $tenant->id]);
+        $global = $this->getDataGenerator()->create_user(['auth' => 'musaml']);
+        $gen->create_user_mapping(['idpid' => $idp->id, 'userid' => $member->id, 'guid' => 'z-1']);
+        $gen->create_user_mapping(['idpid' => $idp->id, 'userid' => $global->id, 'guid' => 'z-2']);
+
+        $this->assertEquals($member->id, login::resolve_user($idp, 'z-1', [])->id);
+        $this->assertNull(login::resolve_user($idp, 'z-2', []));
+        try {
+            login::authenticate($idp, ['UserID' => ['z-2']]);
+            $this->fail('exception expected');
+        } catch (\core\exception\moodle_exception $e) {
+            $this->assertSame('error_nomapping', $e->errorcode);
+        }
+    }
+
     public function test_switch_to_idp_tenant(): void {
         if (!\tool_mulib\local\mulib::is_mutenancy_available()) {
             $this->markTestSkipped('tool_mutenancy is not installed');

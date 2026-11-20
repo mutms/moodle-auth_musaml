@@ -402,6 +402,9 @@ final class mapping_import {
         if (!mapping::can_manage_user($found->id)) {
             return self::outcome($outcome, !empty($options->skipunusable), 'import_error_siteadmin', $found->username);
         }
+        if (!mapping::is_user_allowed_for_idp($idp, $found->id)) {
+            return self::outcome($outcome, !empty($options->skipunusable), 'import_error_nottenantmember', $found->username);
+        }
         if ($found->suspended) {
             return self::outcome($outcome, !empty($options->skipunusable), 'import_error_suspended', $found->username);
         }

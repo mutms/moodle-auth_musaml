@@ -112,6 +112,10 @@ final class create_user_mapping extends external_api {
             throw new invalid_parameter_exception('Site administrators cannot be mapped through web services');
         }
 
+        if (!mapping::is_user_allowed_for_idp($idp, $user->id)) {
+            throw new invalid_parameter_exception('User is not a member of the tenant of the identity provider');
+        }
+
         $mapping = mapping::create((object)[
             'idpid' => $idp->id,
             'userid' => $user->id,

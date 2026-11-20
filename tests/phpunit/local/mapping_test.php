@@ -59,6 +59,29 @@ final class mapping_test extends \advanced_testcase {
         }
     }
 
+    public function test_tenant_identity_providers_map_tenant_members_only(): void {
+        if (!\tool_mulib\local\mulib::is_mutenancy_available()) {
+            $this->markTestSkipped('tool_mutenancy is not installed');
+        }
+        /** @var \tool_mutenancy_generator $tenancygen */
+        $tenancygen = $this->getDataGenerator()->get_plugin_generator('tool_mutenancy');
+        $tenant1 = $tenancygen->create_tenant();
+        $tenant2 = $tenancygen->create_tenant();
+        $gen = $this->getDataGenerator()->get_plugin_generator('auth_musaml');
+        $siteidp = $gen->create_idp();
+        $tenantidp = $gen->create_idp(['tenantid' => $tenant1->id]);
+        $member = $this->getDataGenerator()->create_user(['tenantid' => $tenant1->id]);
+        $other = $this->getDataGenerator()->create_user(['tenantid' => $tenant2->id]);
+        $global = $this->getDataGenerator()->create_user();
+
+        foreach ([$member, $other, $global] as $user) {
+            $this->assertTrue(mapping::is_user_allowed_for_idp($siteidp, $user->id));
+        }
+        $this->assertTrue(mapping::is_user_allowed_for_idp($tenantidp, $member->id));
+        $this->assertFalse(mapping::is_user_allowed_for_idp($tenantidp, $other->id));
+        $this->assertFalse(mapping::is_user_allowed_for_idp($tenantidp, $global->id));
+    }
+
     public function test_create_fetch_delete(): void {
         $gen = $this->getDataGenerator()->get_plugin_generator('auth_musaml');
         $idp = $gen->create_idp();

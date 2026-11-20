@@ -30,7 +30,9 @@ Change these only with the maintainer.
   unambiguous. Sites that need shared addresses map their users by hand.
 - Field locking uses the standard `display_auth_lock_options()` settings, so it also covers
   users without a user mapping.
-- A tenant identity provider appears on that tenant login page only.
+- A tenant identity provider appears on that tenant login page only, and maps members of
+  that tenant only, `mapping::is_user_allowed_for_idp()`. A mapping to anybody else is
+  ignored at login and refused everywhere a mapping is made.
 - Users on another authentication method may log in when their mapping allows it. They
   are not attribute synchronised, the site owns their fields.
 - Nothing depends on a scheduled task: assertion ids are cleaned on insert, metadata is

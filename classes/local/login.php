@@ -695,6 +695,10 @@ final class login {
 
         $mapping = mapping::fetch_by_guid($idp->id, $guid);
         if ($mapping) {
+            if (!mapping::is_user_allowed_for_idp($idp, $mapping->userid)) {
+                saml::log('mapping of user ' . $mapping->userid . ' ignored, not a member of the tenant of IDP ' . $idp->id);
+                return null;
+            }
             $user = $DB->get_record('user', ['id' => $mapping->userid]);
             return $user ?: null;
         }

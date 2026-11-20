@@ -114,6 +114,34 @@ final class user_mapping_userid_test extends \advanced_testcase {
         $this->assertNull($source->validate([$value])[$value] ?? null);
     }
 
+    public function test_tenant_identity_provider_offers_tenant_members_only(): void {
+        if (!\tool_mulib\local\mulib::is_mutenancy_available()) {
+            $this->markTestSkipped('tool_mutenancy is not installed');
+        }
+        /** @var \tool_mutenancy_generator $tenancygen */
+        $tenancygen = $this->getDataGenerator()->get_plugin_generator('tool_mutenancy');
+        $tenant = $tenancygen->create_tenant();
+        /** @var \auth_musaml_generator $generator */
+        $generator = $this->getDataGenerator()->get_plugin_generator('auth_musaml');
+        $idp = $generator->create_idp(['name' => 'Tenant IDP', 'tenantid' => $tenant->id]);
+        $member = $this->getDataGenerator()->create_user([
+            'firstname' => 'Member',
+            'lastname' => 'User',
+            'tenantid' => $tenant->id,
+        ]);
+        $global = $this->getDataGenerator()->create_user(['firstname' => 'Global', 'lastname' => 'User']);
+
+        $this->setAdminUser();
+        $source = new user_mapping_userid((int)$idp->id);
+        $results = $this->search($source, 'User');
+        $this->assertArrayHasKey((string)$member->id, $results);
+        $this->assertArrayNotHasKey((string)$global->id, $results);
+        $value = (string)$global->id;
+        $this->assertSame(get_string('error_nottenantmember', 'auth_musaml'), $source->validate([$value])[$value] ?? null);
+        $value = (string)$member->id;
+        $this->assertNull($source->validate([$value])[$value] ?? null);
+    }
+
     public function test_unknown_idp(): void {
         $this->setAdminUser();
         $this->expectException(\core\exception\invalid_parameter_exception::class);

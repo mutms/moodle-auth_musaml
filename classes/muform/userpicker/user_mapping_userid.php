@@ -33,6 +33,9 @@ final class user_mapping_userid extends \tool_mulib\muform\userpicker\base {
     /** @var int identity provider id */
     private int $idpid;
 
+    /** @var \stdClass identity provider record */
+    private \stdClass $idp;
+
     /**
      * Constructor.
      *
@@ -40,10 +43,12 @@ final class user_mapping_userid extends \tool_mulib\muform\userpicker\base {
      */
     public function __construct(int $idpid) {
         require_capability('auth/musaml:managemappings', \core\context\system::instance());
-        if (!idp::fetch($idpid)) {
+        $idp = idp::fetch($idpid);
+        if (!$idp) {
             throw new \core\exception\invalid_parameter_exception('Invalid identity provider');
         }
         $this->idpid = $idpid;
+        $this->idp = $idp;
     }
 
     #[\Override]
@@ -68,6 +73,10 @@ final class user_mapping_userid extends \tool_mulib\muform\userpicker\base {
             [$notadmin, $params] = $DB->get_in_or_equal($admins, SQL_PARAMS_NAMED, 'musamladmin', false);
             $where .= " AND u.id $notadmin";
         }
+        if ($this->idp->tenantid && \tool_mulib\local\mulib::is_mutenancy_active()) {
+            $where .= " AND u.tenantid = :musamltenantid";
+            $params['musamltenantid'] = $this->idp->tenantid;
+        }
         return new sql($where, $params);
     }
 
@@ -87,6 +96,8 @@ final class user_mapping_userid extends \tool_mulib\muform\userpicker\base {
         foreach ($values as $value) {
             if (!mapping::can_manage_user((int)$value)) {
                 $errors[(string)$value] = get_string('error_siteadminmapping', 'auth_musaml');
+            } else if (!mapping::is_user_allowed_for_idp($this->idp, (int)$value)) {
+                $errors[(string)$value] = get_string('error_nottenantmember', 'auth_musaml');
             } else if (mapping::fetch_by_userid((int)$value)) {
                 $errors[(string)$value] = get_string('error_usermapped', 'auth_musaml');
             }
