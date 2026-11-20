@@ -1,12 +1,12 @@
 # auth_musaml compared with auth_saml2
 
 Both [auth_saml2](https://github.com/catalyst/moodle-auth_saml2) and auth_musaml log users
-in through SAML 2.0, and they can run side by side on one site.
+in through SAML 2.0. Using both on the same site is not recommended, see below.
 
 |                                          | auth_saml2                                 | auth_musaml                                           |
 |------------------------------------------|--------------------------------------------|-------------------------------------------------------|
 | Library                                  | [SimpleSAMLphp](https://simplesamlphp.org) | [php-saml](https://github.com/SAML-Toolkits/php-saml) |
-| Maturity                                 | years in production                        | preview release                                       |
+| Maturity                                 | years in production                        | new, tested with a few identity providers             |
 | Site settings                            | 48, plus per field mapping and locks       | 2, plus per field locks                               |
 | Identity provider settings               | global, shared by all providers            | per provider                                          |
 | Attribute mapping                        | global settings, one set for all providers | per provider, with sync and matching rules            |
@@ -52,11 +52,12 @@ the email address, so use `uid` as the user id.
 
 ## Running both on one site
 
-They use separate entity IDs, certificates, endpoints and tables, so an identity provider
-sees two unrelated services. Watch three things:
+Not recommended. Both bundle their own copy of the XML security library and a site loads
+only one of them, auth_musaml needs version 4 of it. Where both must run, for example
+during a migration, keep in mind:
 
 - A user account uses one login method at a time.
 - Turn off `attemptsignout` in auth_saml2, its logout hook signs out every user, not only
   its own.
-- Both bundle the same XML security library and the first one loaded wins, so keep the
-  versions compatible.
+- They use separate entity IDs, certificates, endpoints and tables, so an identity provider
+  sees two unrelated services.

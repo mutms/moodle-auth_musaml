@@ -6,4 +6,4 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
 
 ## [Unreleased]
 
-- Initial preview release
+- Initial release

@@ -3,8 +3,6 @@
 Users log in to Moodle through a SAML 2.0 identity provider, such as Google Workspace,
 Keycloak or Okta.
 
-Status: preview release for Moodle 5.3dev.
-
 ## Features
 
 - Add as many identity providers as you need, each with its own settings and attribute
@@ -97,6 +95,9 @@ How a tile is pointed to a URL depends on the product, see the page of the provi
 ## Compared with auth_saml2
 
 Both plugins do SAML logins and suit different sites. See [COMPARISON.md](COMPARISON.md).
+
+Using both plugins on the same site is not recommended. They bundle their own copies of the
+XML security library, a site loads only one of them, and auth_musaml needs version 4 of it.
 
 ## AI disclosure
 

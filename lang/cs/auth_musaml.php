@@ -52,6 +52,7 @@ $string['check_certificates_expired'] = 'Certifikátu pro {$a->name} vypršela p
 $string['check_certificates_none'] = 'Nebyly nalezeny žádné certifikáty s datem vypršení platnosti.';
 $string['check_certificates_ok'] = 'Do vypršení platnosti certifikátu pro {$a->name} zbývá: {$a->time}.';
 $string['check_certificates_soon'] = 'Certifikátu pro {$a->name} brzy vyprší platnost, zbývá: {$a->time}.';
+$string['environment_saml2'] = 'Je přítomen modul auth_saml2, není kompatibilní s ověřováním SAML.';
 $string['error_certificate'] = 'Text neobsahuje platné certifikáty.';
 $string['error_createemail'] = 'Nový uživatelský účet nelze vytvořit, e-mailovou adresu „{$a}“ nelze použít.';
 $string['error_createmissing'] = 'Nový uživatelský účet nelze vytvořit, poskytovatel identity neposlal pole „{$a}“.';

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<COMPATIBILITY_MATRIX>
+    <PLUGIN name="auth_musaml">
+        <CUSTOM_CHECKS>
+            <CUSTOM_CHECK file="auth/musaml/environmentlib.php" function="auth_musaml_environment_saml2" level="optional">
+                <FEEDBACK>
+                    <ON_CHECK message="environment_saml2" plugin="auth_musaml"/>
+                </FEEDBACK>
+            </CUSTOM_CHECK>
+        </CUSTOM_CHECKS>
+    </PLUGIN>
+</COMPATIBILITY_MATRIX>

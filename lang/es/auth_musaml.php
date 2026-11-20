@@ -56,6 +56,7 @@ $string['check_certificates_expired'] = 'El certificado de {$a->name} expiró ha
 $string['check_certificates_none'] = 'No se han encontrado certificados con fecha de expiración.';
 $string['check_certificates_ok'] = 'El certificado de {$a->name} expira dentro de {$a->time}.';
 $string['check_certificates_soon'] = 'El certificado de {$a->name} expira pronto, dentro de {$a->time}.';
+$string['environment_saml2'] = 'El plugin auth_saml2 está presente, no es compatible con la autenticación SAML.';
 $string['error_certificate'] = 'El texto no contiene certificados válidos.';
 $string['error_createemail'] = 'No se puede crear una nueva cuenta de usuario, la dirección de correo "{$a}" no se puede utilizar.';
 $string['error_createmissing'] = 'No se puede crear una nueva cuenta de usuario, el proveedor de identidad no ha enviado el campo "{$a}".';
