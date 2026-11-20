@@ -67,6 +67,7 @@ $string['error_entityidtoolong'] = 'L’identifiant d’entité dépasse 255 car
 $string['error_guidmapped'] = 'Ce compte du fournisseur d’identité est déjà apparié à un autre utilisateur.';
 $string['error_idpunavailable'] = 'Ce fournisseur d’identité n’est pas disponible.';
 $string['error_logout'] = 'Le message de déconnexion du fournisseur d’identité a été rejeté : {$a}';
+$string['error_logout_idp'] = 'Vous êtes déconnecté de ce site, mais le fournisseur d’identité n’a pas fermé sa propre session ({$a}). Déconnectez-vous aussi auprès du fournisseur d’identité ou fermez le navigateur.';
 $string['error_metadatablocked'] = 'L’URL des métadonnées {$a} est bloquée par les réglages de sécurité cURL du site, voir « Sécurité HTTP » dans l’administration du site.';
 $string['error_metadatadownload'] = 'Échec du téléchargement des métadonnées : {$a}';
 $string['error_metadatanourl'] = 'Des métadonnées collées ne peuvent pas être actualisées. Collez de nouvelles métadonnées dans les paramètres du fournisseur d’identité.';

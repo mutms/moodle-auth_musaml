@@ -67,6 +67,7 @@ $string['error_entityidtoolong'] = 'Die Entity-ID ist länger als 255 Zeichen, d
 $string['error_guidmapped'] = 'Dieses Konto beim Identitätsanbieter ist bereits einer/m anderen Nutzer/in zugeordnet.';
 $string['error_idpunavailable'] = 'Dieser Identitätsanbieter ist nicht verfügbar.';
 $string['error_logout'] = 'Die Abmeldenachricht des Identitätsanbieters wurde abgelehnt: {$a}';
+$string['error_logout_idp'] = 'Sie sind von dieser Website abgemeldet, aber der Identitätsanbieter hat seine eigene Sitzung nicht beendet ({$a}). Melden Sie sich auch beim Identitätsanbieter ab oder schließen Sie den Browser.';
 $string['error_metadatablocked'] = 'Die Metadaten-URL {$a} wird durch die cURL-Sicherheitseinstellungen der Website blockiert, siehe „HTTP-Sicherheit“ in der Website-Administration.';
 $string['error_metadatadownload'] = 'Das Herunterladen der Metadaten ist fehlgeschlagen: {$a}';
 $string['error_metadatanourl'] = 'Eingefügte Metadaten können nicht aktualisiert werden. Fügen Sie neue Metadaten in den Einstellungen des Identitätsanbieters ein.';

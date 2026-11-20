@@ -935,6 +935,110 @@ final class login {
     }
 
     /**
+     * Identity provider that issued a logout response, found by its issuer.
+     *
+     * @param string $message SAMLResponse parameter of either binding
+     * @return stdClass|null
+     */
+    public static function get_logout_response_idp(string $message): ?stdClass {
+        saml::init();
+
+        $xml = self::decode_message($message);
+        if ($xml === null) {
+            return null;
+        }
+        try {
+            $dom = @\OneLogin\Saml2\Utils::loadXML(new \DOMDocument(), $xml);
+        } catch (\Throwable $e) {
+            return null;
+        }
+        if (!$dom) {
+            return null;
+        }
+        $issuer = \OneLogin\Saml2\Utils::query($dom, '/samlp:LogoutResponse/saml:Issuer')->item(0);
+        if (!$issuer) {
+            return null;
+        }
+        return idp::fetch_by_entityid(trim($issuer->textContent));
+    }
+
+    /**
+     * Handle the identity provider answer to our logout request.
+     *
+     * @param stdClass $idp
+     * @param string $message SAMLResponse parameter
+     * @param bool $redirectbinding true when the message came in the query string
+     * @throws moodle_exception when the message is not valid or the identity provider refused the logout
+     */
+    public static function process_logout_response(stdClass $idp, string $message, bool $redirectbinding): void {
+        $auth = saml::create_auth($idp);
+        $settings = $auth->getSettings();
+
+        try {
+            $response = new \OneLogin\Saml2\LogoutResponse($settings, $message);
+            if (!@$response->isValid(null, $redirectbinding)) {
+                throw new \RuntimeException((string)$response->getError());
+            }
+            if (!$redirectbinding) {
+                self::validate_post_signature($settings, $response->document);
+            }
+            $status = $response->getStatus();
+        } catch (\Throwable $e) {
+            saml::log('logout response rejected for IDP ' . $idp->id . ': ' . $e->getMessage());
+            throw new moodle_exception('error_logout', 'auth_musaml', '', $e->getMessage());
+        }
+
+        if ($status !== \OneLogin\Saml2\Constants::STATUS_SUCCESS) {
+            saml::log('logout refused by IDP ' . $idp->id . ': ' . $status);
+            $short = substr((string)$status, strrpos((string)$status, ':') + 1);
+            throw new moodle_exception('error_logout_idp', 'auth_musaml', '', $short);
+        }
+
+        self::kill_idp_sessions();
+    }
+
+    /**
+     * Verify the XML signature of a logout response sent with the POST binding.
+     *
+     * @param \OneLogin\Saml2\Settings $settings
+     * @param \DOMDocument $document
+     */
+    private static function validate_post_signature(\OneLogin\Saml2\Settings $settings, \DOMDocument $document): void {
+        $xpath = '/samlp:LogoutResponse/ds:Signature';
+        if (!\OneLogin\Saml2\Utils::query($document, $xpath)->length) {
+            throw new \RuntimeException('The logout response is not signed');
+        }
+        $idpdata = $settings->getIdPData();
+        $certs = $idpdata['x509certMulti']['signing'] ?? null;
+        $valid = \OneLogin\Saml2\Utils::validateSign(
+            $document,
+            $idpdata['x509cert'] ?? null,
+            $idpdata['certFingerprint'] ?? null,
+            $idpdata['certFingerprintAlgorithm'] ?? 'sha1',
+            $xpath,
+            $certs
+        );
+        if (!$valid) {
+            throw new \RuntimeException('Signature validation failed');
+        }
+    }
+
+    /**
+     * Decode a SAML message of either binding.
+     *
+     * @param string $message base64, deflated for the redirect binding
+     * @return string|null XML
+     */
+    private static function decode_message(string $message): ?string {
+        $decoded = base64_decode($message, true);
+        if ($decoded === false || $decoded === '') {
+            return null;
+        }
+        $inflated = @gzinflate($decoded);
+        return $inflated === false ? $decoded : $inflated;
+    }
+
+    /**
      * End the Moodle sessions of the user the identity provider is logging out.
      *
      * Called by the library while it processes a logout request.

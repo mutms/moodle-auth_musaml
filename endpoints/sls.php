@@ -34,6 +34,7 @@ use core\exception\moodle_exception;
 
 // phpcs:disable moodle.Commenting.InlineComment.TypeHintingMatch
 /** @var moodle_page $PAGE */
+/** @var core_renderer $OUTPUT */
 // phpcs:enable moodle.Commenting.InlineComment.TypeHintingMatch
 
 // phpcs:disable moodle.Files.RequireLogin.Missing
@@ -43,7 +44,8 @@ $idpid = optional_param('idpid', 0, PARAM_INT);
 
 // A logout message always carries one of these. Without one this is not the identity
 // provider talking, so nothing may end the session, a plain link must not log anybody out.
-if (!isset($_GET['SAMLRequest']) && !isset($_GET['SAMLResponse'])) {
+$response = $_GET['SAMLResponse'] ?? $_POST['SAMLResponse'] ?? null;
+if (!isset($_GET['SAMLRequest']) && !is_string($response)) {
     redirect(new \core\url('/'));
 }
 
@@ -51,6 +53,17 @@ $PAGE->set_url('/auth/musaml/endpoints/sls.php');
 $PAGE->set_context(\core\context\system::instance());
 
 $home = (new \core\url('/'))->out(false);
+
+$fail = function (string $message) use ($PAGE, $OUTPUT, $home): never {
+    require_logout();
+    $PAGE->set_pagelayout('login');
+    $PAGE->set_title(get_string('logout'));
+    echo $OUTPUT->header();
+    echo $OUTPUT->notification($message, 'warning', false);
+    echo $OUTPUT->continue_button($home);
+    echo $OUTPUT->footer();
+    die;
+};
 
 // The identity provider of the current session, or the one named in the request.
 $session = login::get_session();
@@ -61,7 +74,19 @@ if ($session) {
 if (!$idp && $idpid) {
     $idp = idp::fetch($idpid);
 }
+if (!$idp && is_string($response)) {
+    $idp = login::get_logout_response_idp($response);
+}
 if (!$idp || !saml::has_sp_certificate()) {
+    redirect($home);
+}
+
+if (is_string($response)) {
+    try {
+        login::process_logout_response($idp, $response, isset($_GET['SAMLResponse']));
+    } catch (moodle_exception $e) {
+        $fail($e->getMessage());
+    }
     redirect($home);
 }
 
@@ -71,9 +96,7 @@ try {
     // The identity provider did send a message, it just cannot be verified. Ending the
     // local session is still right, the user must never be left with a session the
     // identity provider believes is gone.
-    \core\notification::warning($e->getMessage());
-    require_logout();
-    redirect($home);
+    $fail($e->getMessage());
 }
 
 redirect($url ?: $home);

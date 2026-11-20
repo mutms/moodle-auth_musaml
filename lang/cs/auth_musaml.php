@@ -63,6 +63,7 @@ $string['error_entityidtoolong'] = 'ID entity je delší než 255 znaků, tohoto
 $string['error_guidmapped'] = 'Tento účet poskytovatele identity je už namapován na jiného uživatele.';
 $string['error_idpunavailable'] = 'Tento poskytovatel identity není dostupný.';
 $string['error_logout'] = 'Zpráva poskytovatele identity o odhlášení byla odmítnuta: {$a}';
+$string['error_logout_idp'] = 'Byli jste odhlášeni z těchto stránek, ale poskytovatel identity neukončil své vlastní přihlášení ({$a}). Odhlaste se i u poskytovatele identity, nebo zavřete prohlížeč.';
 $string['error_metadatablocked'] = 'URL metadat {$a} je blokováno nastavením zabezpečení cURL těchto stránek, viz „Zabezpečení HTTP“ ve správě stránek.';
 $string['error_metadatadownload'] = 'Stažení metadat se nezdařilo: {$a}';
 $string['error_metadatanourl'] = 'Vložená metadata nelze obnovit. Vložte nová metadata v nastavení poskytovatele identity.';

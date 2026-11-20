@@ -63,6 +63,7 @@ $string['error_entityidtoolong'] = 'L\'entity ID supera i 255 caratteri, questo 
 $string['error_guidmapped'] = 'Questo account del provider di identità è già mappato a un altro utente.';
 $string['error_idpunavailable'] = 'Questo provider di identità non è disponibile.';
 $string['error_logout'] = 'Il messaggio di logout del provider di identità è stato rifiutato: {$a}';
+$string['error_logout_idp'] = 'Sei uscito da questo sito, ma il provider di identità non ha chiuso la propria sessione ({$a}). Esci anche dal provider di identità oppure chiudi il browser.';
 $string['error_metadatablocked'] = 'L\'URL dei metadati {$a} è bloccato dalle impostazioni di sicurezza cURL del sito, vedere "Sicurezza HTTP" nell\'amministrazione del sito.';
 $string['error_metadatadownload'] = 'Scaricamento dei metadati non riuscito: {$a}';
 $string['error_metadatanourl'] = 'I metadati incollati non possono essere aggiornati. Incollare i nuovi metadati nelle impostazioni del provider di identità.';

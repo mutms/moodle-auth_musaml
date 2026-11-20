@@ -63,6 +63,7 @@ $string['error_entityidtoolong'] = 'Entity ID is longer than 255 characters, thi
 $string['error_guidmapped'] = 'This identity provider account is already mapped to another user.';
 $string['error_idpunavailable'] = 'This identity provider is not available.';
 $string['error_logout'] = 'The identity provider logout message was rejected: {$a}';
+$string['error_logout_idp'] = 'You are logged out of this site, but the identity provider did not end its own session ({$a}). Log out at the identity provider too, or close the browser.';
 $string['error_metadatablocked'] = 'Metadata URL {$a} is blocked by the site cURL security settings, see "HTTP security" in site administration.';
 $string['error_metadatadownload'] = 'Metadata download failed: {$a}';
 $string['error_metadatanourl'] = 'Pasted metadata cannot be refreshed. Paste new metadata in the identity provider settings.';

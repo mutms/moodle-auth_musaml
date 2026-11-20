@@ -38,9 +38,22 @@ use PHPUnit\Framework\Attributes\Group;
 #[CoversClass(\auth_musaml\local\login::class)]
 #[Group('MuTMS')]
 final class login_test extends \advanced_testcase {
+    /** @var string|null REQUEST_URI before a test pretended to be the logout endpoint */
+    private ?string $requesturi = null;
+
     public function setUp(): void {
         parent::setUp();
         $this->resetAfterTest();
+        $this->requesturi = $_SERVER['REQUEST_URI'] ?? null;
+    }
+
+    public function tearDown(): void {
+        if ($this->requesturi === null) {
+            unset($_SERVER['REQUEST_URI']);
+        } else {
+            $_SERVER['REQUEST_URI'] = $this->requesturi;
+        }
+        parent::tearDown();
     }
 
     /**
@@ -330,6 +343,120 @@ final class login_test extends \advanced_testcase {
         } finally {
             unset($_GET['SAMLRequest']);
         }
+    }
+
+    /**
+     * IDP with a signing key of its own, the metadata carries its certificate.
+     *
+     * @return array [idp record, private key PEM, certificate PEM]
+     */
+    private function create_signing_idp(): array {
+        $key = \auth_musaml\local\openssl::generate_key();
+        $cert = \auth_musaml\local\openssl::create_self_signed_cert($key, ['commonName' => 'idp.example.com']);
+        $keypem = \auth_musaml\local\openssl::export_key_plain($key);
+        $metadata = [
+            'entityid' => 'https://idp.example.com/saml',
+            'ssourl' => 'https://idp.example.com/sso',
+            'slourl' => 'https://idp.example.com/slo',
+            'certs' => [preg_replace('/-----[A-Z ]+-----|\s/', '', $cert)],
+            'nameidformat' => null,
+            'attributes' => [],
+            'validuntil' => null,
+        ];
+        $idp = $this->get_generator()->create_idp(['provider' => 'generic', 'metadata' => $metadata]);
+        $_SERVER['REQUEST_URI'] = saml::get_endpoint_url('sls')->get_path();
+        return [$idp, $keypem, $cert];
+    }
+
+    /**
+     * Logout response as the identity provider would post it.
+     *
+     * @param string $issuer
+     * @param string $status
+     * @param string|null $keypem null leaves the message unsigned
+     * @param string|null $certpem
+     * @return string base64 SAMLResponse
+     */
+    private function create_logout_response(string $issuer, string $status, ?string $keypem, ?string $certpem): string {
+        $destination = saml::get_endpoint_url('sls')->out(false);
+        $now = gmdate('Y-m-d\TH:i:s\Z');
+        $xml = '<samlp:LogoutResponse xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"'
+            . ' xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="_r1" Version="2.0"'
+            . ' IssueInstant="' . $now . '" Destination="' . $destination . '" InResponseTo="ONELOGIN_x">'
+            . '<saml:Issuer>' . $issuer . '</saml:Issuer>'
+            . '<samlp:Status><samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:' . $status . '"/></samlp:Status>'
+            . '</samlp:LogoutResponse>';
+        if ($keypem !== null) {
+            $xml = \OneLogin\Saml2\Utils::addSign($xml, $keypem, $certpem);
+        }
+        return base64_encode($xml);
+    }
+
+    public function test_get_logout_response_idp(): void {
+        saml::regenerate_sp_certificate();
+        [$idp, $keypem, $cert] = $this->create_signing_idp();
+
+        $message = $this->create_logout_response($idp->entityid, 'Success', $keypem, $cert);
+        $this->assertSame($idp->id, login::get_logout_response_idp($message)->id);
+        $redirect = base64_encode(gzdeflate(base64_decode($message)));
+        $this->assertSame($idp->id, login::get_logout_response_idp($redirect)->id);
+
+        $this->assertNull(login::get_logout_response_idp($this->create_logout_response('https://other', 'Success', null, null)));
+        $this->assertNull(login::get_logout_response_idp(base64_encode('nonsense')));
+        $this->assertNull(login::get_logout_response_idp('***'));
+    }
+
+    public function test_process_logout_response_post(): void {
+        saml::regenerate_sp_certificate();
+        [$idp, $keypem, $cert] = $this->create_signing_idp();
+        $user = $this->getDataGenerator()->create_user(['auth' => 'musaml']);
+        $this->setUser($user);
+
+        $message = $this->create_logout_response($idp->entityid, 'Success', $keypem, $cert);
+        login::process_logout_response($idp, $message, false);
+        $this->assertFalse(isloggedin());
+    }
+
+    public function test_process_logout_response_post_refused(): void {
+        saml::regenerate_sp_certificate();
+        [$idp, $keypem, $cert] = $this->create_signing_idp();
+
+        $message = $this->create_logout_response($idp->entityid, 'AuthnFailed', $keypem, $cert);
+        try {
+            login::process_logout_response($idp, $message, false);
+            $this->fail('exception expected');
+        } catch (\core\exception\moodle_exception $e) {
+            $this->assertSame('error_logout_idp', $e->errorcode);
+            $this->assertStringContainsString('(AuthnFailed)', $e->getMessage());
+        }
+    }
+
+    public function test_process_logout_response_post_signature(): void {
+        saml::regenerate_sp_certificate();
+        [$idp] = $this->create_signing_idp();
+        [, $otherkey, $othercert] = $this->create_signing_idp_key();
+
+        $unsigned = $this->create_logout_response($idp->entityid, 'Success', null, null);
+        $forged = $this->create_logout_response($idp->entityid, 'Success', $otherkey, $othercert);
+        foreach (['unsigned' => $unsigned, 'forged' => $forged] as $label => $message) {
+            try {
+                login::process_logout_response($idp, $message, false);
+                $this->fail('exception expected for ' . $label);
+            } catch (\core\exception\moodle_exception $e) {
+                $this->assertSame('error_logout', $e->errorcode, $label);
+            }
+        }
+    }
+
+    /**
+     * Key and certificate that no identity provider trusts.
+     *
+     * @return array [null, private key PEM, certificate PEM]
+     */
+    private function create_signing_idp_key(): array {
+        $key = \auth_musaml\local\openssl::generate_key();
+        $cert = \auth_musaml\local\openssl::create_self_signed_cert($key, ['commonName' => 'attacker.example.com']);
+        return [null, \auth_musaml\local\openssl::export_key_plain($key), $cert];
     }
 
     public function test_autologin_idp(): void {

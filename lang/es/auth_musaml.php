@@ -67,6 +67,7 @@ $string['error_entityidtoolong'] = 'El ID de entidad tiene más de 255 caractere
 $string['error_guidmapped'] = 'Esta cuenta del proveedor de identidad ya está mapeada a otro usuario.';
 $string['error_idpunavailable'] = 'Este proveedor de identidad no está disponible.';
 $string['error_logout'] = 'El mensaje de cierre de sesión del proveedor de identidad ha sido rechazado: {$a}';
+$string['error_logout_idp'] = 'Ha cerrado la sesión en este sitio, pero el proveedor de identidad no ha cerrado su propia sesión ({$a}). Cierre también la sesión en el proveedor de identidad o cierre el navegador.';
 $string['error_metadatablocked'] = 'La URL de metadatos {$a} está bloqueada por los ajustes de seguridad de cURL del sitio, consulte "Seguridad HTTP" en la administración del sitio.';
 $string['error_metadatadownload'] = 'Ha fallado la descarga de los metadatos: {$a}';
 $string['error_metadatanourl'] = 'Los metadatos pegados no se pueden actualizar. Pegue los nuevos metadatos en los ajustes del proveedor de identidad.';
