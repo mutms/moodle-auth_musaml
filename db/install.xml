@@ -66,7 +66,7 @@
             <FIELDS>
                 <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
                 <FIELD NAME="idpid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
-                <FIELD NAME="token" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false" COMMENT="Random value kept in a cookie of the browser that started the login"/>
+                <FIELD NAME="token" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false" COMMENT="Random value kept in the Moodle session that started the login"/>
                 <FIELD NAME="requestid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="ID of the sent authentication request, the response must answer it"/>
                 <FIELD NAME="wantsurl" TYPE="char" LENGTH="1333" NOTNULL="false" SEQUENCE="false" COMMENT="Where to go after the login"/>
                 <FIELD NAME="test" TYPE="int" LENGTH="1" NOTNULL="true" SEQUENCE="false" COMMENT="1 for an admin test login, nobody is logged in"/>

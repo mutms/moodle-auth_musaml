@@ -600,6 +600,67 @@ final class login_test extends \advanced_testcase {
         $sink->close();
     }
 
+    public function test_fetch_request_for_response(): void {
+        global $DB;
+        saml::regenerate_sp_certificate();
+        $idp = $this->get_generator()->create_idp();
+
+        login::start($idp, '/my/');
+        $request = login::fetch_request();
+        $answer = fn(string $inresponseto) => base64_encode('<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"'
+            . ' ID="_a" Version="2.0" IssueInstant="2026-01-01T00:00:00Z" InResponseTo="' . $inresponseto . '"/>');
+
+        $this->assertSame($request->id, login::fetch_request_for_response($answer($request->requestid))->id);
+        $this->assertMatchesRegularExpression(login::REQUEST_ID_PATTERN, $request->requestid);
+        $this->assertNull(login::fetch_request_for_response($answer('ONELOGIN_other')));
+        $this->assertNull(login::fetch_request_for_response($answer('')));
+        $this->assertNull(login::fetch_request_for_response($answer(strtoupper($request->requestid))));
+        $this->assertNull(login::fetch_request_for_response($answer($request->requestid . '0')));
+        $this->assertNull(login::fetch_request_for_response($answer($request->requestid . '&#10;')));
+        $this->assertNull(login::fetch_request_for_response($answer(' ' . $request->requestid)));
+        $unanswered = base64_encode('<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"/>');
+        $this->assertNull(login::fetch_request_for_response($unanswered));
+        $this->assertNull(login::fetch_request_for_response('***'));
+
+        $DB->set_field('auth_musaml_login', 'timeexpires', time() - 1, ['id' => $request->id]);
+        $this->assertNull(login::fetch_request_for_response($answer($request->requestid)), 'expired request is dropped');
+    }
+
+    public function test_first_result_wins(): void {
+        global $DB;
+        saml::regenerate_sp_certificate();
+        $idp = $this->get_generator()->create_idp();
+
+        login::start($idp);
+        $request = login::fetch_request();
+        $this->assertTrue(login::store_result($request, ['bag' => ['UserID' => ['z-1']]], 7));
+        $this->assertFalse(login::store_result($request, ['error' => 'garbage'], null));
+        $this->assertSame(7, (int)$DB->get_field('auth_musaml_login', 'userid', ['id' => $request->id]));
+
+        login::start($idp);
+        $request = login::fetch_request();
+        $this->assertTrue(login::store_result($request, ['error' => 'garbage'], null));
+        $this->assertFalse(login::store_result($request, ['bag' => ['UserID' => ['z-1']]], 7));
+        $this->assertSame(['error' => 'garbage'], login::pop_result()['result']);
+    }
+
+    public function test_result_is_finished_by_the_starting_session_only(): void {
+        global $SESSION;
+        saml::regenerate_sp_certificate();
+        $idp = $this->get_generator()->create_idp();
+
+        login::start($idp, '/my/');
+        $request = login::fetch_request();
+        login::store_result($request, ['bag' => ['UserID' => ['z-1']]], 7);
+
+        $started = $SESSION;
+        $SESSION = new \stdClass();
+        $this->assertNull(login::pop_result(), 'another session cannot finish the login');
+
+        $SESSION = $started;
+        $this->assertSame(7, (int)login::pop_result()['request']->userid);
+    }
+
     public function test_login_url(): void {
         global $CFG;
         $idp = $this->get_generator()->create_idp();
@@ -609,7 +670,7 @@ final class login_test extends \advanced_testcase {
     }
 
     public function test_start_and_pop_request(): void {
-        global $DB;
+        global $DB, $SESSION;
         saml::regenerate_sp_certificate();
         $idp = $this->get_generator()->create_idp();
 
@@ -620,21 +681,21 @@ final class login_test extends \advanced_testcase {
         $this->assertStringContainsString('&Signature=', $url, 'authn requests are signed');
         $this->assertStringContainsString('SigAlg=' . urlencode('http://www.w3.org/2001/04/xmldsig-more#rsa-sha256'), $url);
 
-        // The response arrives without a session, so the pending login is a row and a cookie.
+        // The response arrives without a session, so the pending login is a row keyed from the session.
         $request = login::fetch_request();
         $this->assertEquals($idp->id, $request->idpid);
         $this->assertStringStartsWith('ONELOGIN_', $request->requestid);
         $this->assertSame('/my/', $request->wantsurl);
         $this->assertSame(0, (int)$request->test);
         $this->assertSame(0, (int)$request->ready);
-        $this->assertSame($request->token, $_COOKIE[login::REQUEST_COOKIE]);
+        $this->assertSame($request->token, $SESSION->auth_musaml_login);
 
         login::start($idp, '', true);
         $this->assertSame(1, (int)login::fetch_request()->test);
 
         // Nothing is handed over before a response was accepted.
         $this->assertNull(login::pop_result());
-        $this->assertNull(login::fetch_request(), 'the cookie is cleared with the row');
+        $this->assertNull(login::fetch_request(), 'the session forgets the request with the row');
 
         login::start($idp, '/my/');
         $request = login::fetch_request();

@@ -37,8 +37,8 @@ final class login {
     /** @var int pending request expires after this many seconds */
     public const REQUEST_TTL = 600;
 
-    /** @var string cookie name holding the token of a login in progress */
-    public const REQUEST_COOKIE = 'musaml_login';
+    /** @var string format of the authentication request ids php-saml generates */
+    public const REQUEST_ID_PATTERN = '/^ONELOGIN_[0-9a-f]{40}$/D';
 
     /** @var string login page parameter that turns automatic SSO redirect off */
     public const PARAM_AUTOLOGIN = 'musaml';
@@ -134,13 +134,13 @@ final class login {
      * @return string
      */
     public static function start(stdClass $idp, string $wantsurl = '', bool $test = false): string {
-        global $DB, $CFG;
+        global $DB, $CFG, $SESSION;
 
         $auth = saml::create_auth($idp);
         $redirecturl = $auth->login($CFG->wwwroot, [], false, false, true);
 
         // The response arrives as a cross site POST without the Moodle session cookie,
-        // so the pending login lives in the database and our own cookie holds the key.
+        // so the pending login lives in the database, the session that finishes it holds the key.
         self::cleanup_requests();
         $record = new stdClass();
         $record->idpid = $idp->id;
@@ -153,7 +153,7 @@ final class login {
         $record->timecreated = time();
         $record->timeexpires = $record->timecreated + self::REQUEST_TTL;
         $DB->insert_record('auth_musaml_login', $record);
-        self::set_request_cookie($record->token);
+        $SESSION->auth_musaml_login = $record->token;
 
         saml::log('login started for IDP ' . $idp->id . ' request ' . $auth->getLastRequestID());
 
@@ -187,14 +187,14 @@ final class login {
     }
 
     /**
-     * Pending login of this browser, null when there is none.
+     * Pending login started in this session, null when there is none.
      *
      * @return stdClass|null
      */
     public static function fetch_request(): ?stdClass {
-        global $DB;
+        global $DB, $SESSION;
 
-        $token = $_COOKIE[self::REQUEST_COOKIE] ?? '';
+        $token = $SESSION->auth_musaml_login ?? '';
         if (!is_string($token) || $token === '') {
             return null;
         }
@@ -206,21 +206,51 @@ final class login {
     }
 
     /**
+     * Pending login a posted SAML response answers, found by its InResponseTo.
+     *
+     * @param string $samlresponse SAMLResponse parameter
+     * @return stdClass|null
+     */
+    public static function fetch_request_for_response(string $samlresponse): ?stdClass {
+        global $DB;
+
+        $dom = self::load_message($samlresponse);
+        if (!$dom || !$dom->documentElement->hasAttribute('InResponseTo')) {
+            return null;
+        }
+        $requestid = $dom->documentElement->getAttribute('InResponseTo');
+        if (!preg_match(self::REQUEST_ID_PATTERN, $requestid)) {
+            return null;
+        }
+        $records = $DB->get_records('auth_musaml_login', ['requestid' => $requestid]);
+        $record = reset($records);
+        if (count($records) !== 1 || $record->timeexpires < time()) {
+            return null;
+        }
+        return $record;
+    }
+
+    /**
      * Store the outcome of a response and stop accepting further responses for it.
+     *
+     * The first stored outcome wins, a later response cannot replace it.
      *
      * @param stdClass $request
      * @param array $result attributes of an accepted response, or a failure reason
      * @param int|null $userid user the response resolved to, null when there is none
+     * @return bool false when the login had an outcome already
      */
-    public static function store_result(stdClass $request, array $result, ?int $userid): void {
+    public static function store_result(stdClass $request, array $result, ?int $userid): bool {
         global $DB;
 
-        $DB->update_record('auth_musaml_login', (object)[
-            'id' => $request->id,
-            'ready' => 1,
-            'userid' => $userid,
-            'resultjson' => json_encode($result),
-        ]);
+        $resultjson = json_encode($result);
+        $sql = "UPDATE {auth_musaml_login}
+                   SET ready = 1, userid = :userid, resultjson = :resultjson
+                 WHERE id = :id AND ready = 0";
+        $DB->execute($sql, ['id' => $request->id, 'userid' => $userid, 'resultjson' => $resultjson]);
+
+        $stored = $DB->get_record('auth_musaml_login', ['id' => $request->id], 'id, userid, resultjson');
+        return $stored && $stored->resultjson === $resultjson && $stored->userid == $userid;
     }
 
     /**
@@ -231,8 +261,7 @@ final class login {
     public static function pop_result(): ?array {
         global $DB;
 
-        $request = self::fetch_request();
-        self::clear_request_cookie();
+        $request = self::claim_request();
         if (!$request) {
             return null;
         }
@@ -248,47 +277,16 @@ final class login {
     }
 
     /**
-     * Cookie of a login in progress.
+     * Pending login of this session, the session forgets it.
      *
-     * The response is posted by the identity provider, so the cookie must survive a cross
-     * site POST, which needs SameSite=None and that needs Secure. Sites without https
-     * only work with an identity provider of the same site, they are warned about it.
-     *
-     * @param string $token
+     * @return stdClass|null
      */
-    private static function set_request_cookie(string $token): void {
-        global $CFG;
+    private static function claim_request(): ?stdClass {
+        global $SESSION;
 
-        $secure = is_https();
-        if (!CLI_SCRIPT && !headers_sent()) {
-            setcookie(self::REQUEST_COOKIE, $token, [
-                'expires' => time() + self::REQUEST_TTL,
-                'path' => $CFG->sessioncookiepath ?? '/',
-                'secure' => $secure,
-                'httponly' => true,
-                'samesite' => $secure ? 'None' : 'Lax',
-            ]);
-        }
-        $_COOKIE[self::REQUEST_COOKIE] = $token;
-    }
-
-    /**
-     * Remove the cookie of a login in progress.
-     */
-    public static function clear_request_cookie(): void {
-        global $CFG;
-
-        $secure = is_https();
-        if (!CLI_SCRIPT && !headers_sent()) {
-            setcookie(self::REQUEST_COOKIE, '', [
-                'expires' => time() - DAYSECS,
-                'path' => $CFG->sessioncookiepath ?? '/',
-                'secure' => $secure,
-                'httponly' => true,
-                'samesite' => $secure ? 'None' : 'Lax',
-            ]);
-        }
-        unset($_COOKIE[self::REQUEST_COOKIE]);
+        $request = self::fetch_request();
+        unset($SESSION->auth_musaml_login);
+        return $request;
     }
 
     /**
@@ -305,8 +303,7 @@ final class login {
      * @return array|null keys: request record, result array
      */
     public static function take_test_result(): ?array {
-        $request = self::fetch_request();
-        self::clear_request_cookie();
+        $request = self::claim_request();
         if (!$request || !$request->ready || !$request->test) {
             return null;
         }
@@ -474,7 +471,7 @@ final class login {
                 'path' => $CFG->sessioncookiepath ?? '/',
                 'secure' => is_https(),
                 'httponly' => true,
-                'samesite' => 'None',
+                'samesite' => 'Lax',
             ]);
         }
         $_COOKIE[self::AUTOLOGIN_COOKIE] = $value;
@@ -486,6 +483,9 @@ final class login {
     public static function clear_autologin_counter(): void {
         global $CFG;
 
+        if (!isset($_COOKIE[self::AUTOLOGIN_COOKIE])) {
+            return;
+        }
         if (!CLI_SCRIPT && !headers_sent()) {
             setcookie(self::AUTOLOGIN_COOKIE, '', [
                 'expires' => time() - DAYSECS,
@@ -941,17 +941,7 @@ final class login {
      * @return stdClass|null
      */
     public static function get_logout_response_idp(string $message): ?stdClass {
-        saml::init();
-
-        $xml = self::decode_message($message);
-        if ($xml === null) {
-            return null;
-        }
-        try {
-            $dom = @\OneLogin\Saml2\Utils::loadXML(new \DOMDocument(), $xml);
-        } catch (\Throwable $e) {
-            return null;
-        }
+        $dom = self::load_message($message);
         if (!$dom) {
             return null;
         }
@@ -1024,18 +1014,26 @@ final class login {
     }
 
     /**
-     * Decode a SAML message of either binding.
+     * Parse a SAML message of either binding, nothing is verified here.
      *
      * @param string $message base64, deflated for the redirect binding
-     * @return string|null XML
+     * @return \DOMDocument|null
      */
-    private static function decode_message(string $message): ?string {
+    private static function load_message(string $message): ?\DOMDocument {
+        saml::init();
+
         $decoded = base64_decode($message, true);
         if ($decoded === false || $decoded === '') {
             return null;
         }
         $inflated = @gzinflate($decoded);
-        return $inflated === false ? $decoded : $inflated;
+        $xml = $inflated === false ? $decoded : $inflated;
+        try {
+            $dom = @\OneLogin\Saml2\Utils::loadXML(new \DOMDocument(), $xml);
+        } catch (\Throwable $e) {
+            return null;
+        }
+        return $dom ?: null;
     }
 
     /**

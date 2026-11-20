@@ -90,6 +90,12 @@ Change these only with the maintainer.
 Responses are accepted only for a request this session started, assertion ids are stored
 until they expire, and `strict` mode is on.
 
+A login in progress needs no cookie of its own. `acs.php` runs without a session and finds
+the pending login by the `InResponseTo` of the response, which must have the format of the
+request ids php-saml generates. Only the session that started the login holds its token,
+so `complete.php` and `test_login.php` finish it there and nowhere else. The first outcome
+stored for a pending login wins, a later response cannot replace it.
+
 Do not accept unsolicited responses. Identity provider initiated login is not a missing
 feature, see the security section in `README.md`.
 

@@ -105,9 +105,7 @@ final class saml {
     /**
      * Does the site run on https?
      *
-     * The identity provider posts the response from its own site, so the cookie that
-     * carries the pending login needs SameSite=None, which browsers only accept on a
-     * secure cookie. Identity providers refuse plain http endpoints as well.
+     * Identity providers refuse plain http endpoints.
      *
      * @return bool
      */

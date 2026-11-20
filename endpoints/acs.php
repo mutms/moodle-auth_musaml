@@ -22,8 +22,9 @@
  * The IDP posts the SAML response here after the user authenticated. That post comes
  * from the site of the identity provider, so the browser sends no Moodle session
  * cookie. This script must never start a session, a new one would replace the session
- * cookie of whoever uses the browser. It stores the outcome with the pending login and
- * redirects, the page after the redirect has the session back.
+ * cookie of whoever uses the browser. It finds the pending login by the request the
+ * response answers, stores the outcome with it and redirects, the page after the
+ * redirect has the session back and only that session can finish the login.
  *
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
@@ -33,6 +34,7 @@
 use auth_musaml\local\idp;
 use auth_musaml\local\login;
 use auth_musaml\local\mapping;
+use auth_musaml\local\saml;
 use core\exception\moodle_exception;
 
 // phpcs:disable moodle.Files.RequireLogin.Missing
@@ -41,10 +43,11 @@ define('NO_DEBUG_DISPLAY', true);
 
 require(__DIR__ . '/../../../config.php');
 
-$request = login::fetch_request();
+$samlresponse = $_POST['SAMLResponse'] ?? null;
+$request = is_string($samlresponse) ? login::fetch_request_for_response($samlresponse) : null;
 
 try {
-    if (empty($_POST['SAMLResponse'])) {
+    if (!is_string($samlresponse) || $samlresponse === '') {
         throw new moodle_exception('error_response', 'auth_musaml', '', 'missing SAMLResponse');
     }
     if (!$request) {
@@ -74,16 +77,17 @@ try {
         // A test never creates or maps anybody, it only reports what would happen.
         $guid = login::get_guid($bag, $idp);
         $mapping = $guid === null ? null : mapping::fetch_by_guid($idp->id, $guid);
-        login::store_result($request, $result, $mapping->userid ?? null);
+        $stored = login::store_result($request, $result, $mapping->userid ?? null);
     } else {
         $user = login::authenticate($idp, $bag);
-        login::store_result($request, $result, $user->id);
+        $stored = login::store_result($request, $result, $user->id);
+    }
+    if (!$stored) {
+        saml::log('login ' . $request->id . ' has an outcome already, response ignored');
     }
 } catch (moodle_exception $e) {
-    if ($request) {
-        login::store_result($request, ['error' => $e->getMessage()], null);
-    } else {
-        login::clear_request_cookie();
+    if ($request && !login::store_result($request, ['error' => $e->getMessage()], null)) {
+        saml::log('login ' . $request->id . ' has an outcome already, ignored: ' . $e->getMessage());
     }
 }
 
