@@ -86,6 +86,7 @@ if (!$mappings) {
         $delete->set_form_size('sm');
         $delete->add_class('text-danger');
 
+        $actions = mapping::can_manage_user($m->userid) ? $OUTPUT->render($edit) . ' ' . $OUTPUT->render($delete) : '';
         $table->data[] = [
             \core\output\html_writer::link($userurl, fullname($m)),
             s($m->username),
@@ -93,7 +94,7 @@ if (!$mappings) {
             $yesno($m->allowotherauth),
             $yesno($m->automapped),
             userdate($m->timecreated),
-            $OUTPUT->render($edit) . ' ' . $OUTPUT->render($delete),
+            $actions,
         ];
     }
     echo \core\output\html_writer::table($table);

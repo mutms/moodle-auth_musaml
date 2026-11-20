@@ -399,6 +399,9 @@ final class mapping_import {
         $outcome->userid = $found->id;
         $outcome->username = $found->username;
 
+        if (!mapping::can_manage_user($found->id)) {
+            return self::outcome($outcome, !empty($options->skipunusable), 'import_error_siteadmin', $found->username);
+        }
         if ($found->suspended) {
             return self::outcome($outcome, !empty($options->skipunusable), 'import_error_suspended', $found->username);
         }

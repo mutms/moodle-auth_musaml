@@ -282,6 +282,26 @@ final class mapping_import_test extends \advanced_testcase {
         $this->assertEquals($manual->id, $outcomes[0]->userid);
     }
 
+    public function test_check_refuses_site_administrators_for_other_users(): void {
+        $idp = $this->get_generator()->create_idp();
+        $columns = [0 => mapping_import::COLUMN_GUID, 1 => 'username'];
+        $rows = [['guid', 'username'], ['z-1', 'admin']];
+        $options = $this->get_options(false, ['allowotherauth' => 1]);
+
+        $this->setUser($this->getDataGenerator()->create_user());
+        $outcome = mapping_import::check($idp, $this->csvdata($rows, $columns), $options)[0];
+        $this->assertSame(mapping_import::RESULT_ERROR, $outcome->result);
+        $this->assertStringContainsString('site administrator', $outcome->message);
+
+        $skipping = $this->get_options(true, ['allowotherauth' => 1]);
+        $outcome = mapping_import::check($idp, $this->csvdata($rows, $columns), $skipping)[0];
+        $this->assertSame(mapping_import::RESULT_SKIPPED, $outcome->result);
+
+        $this->setAdminUser();
+        $outcome = mapping_import::check($idp, $this->csvdata($rows, $columns), $options)[0];
+        $this->assertSame(mapping_import::RESULT_CREATED, $outcome->result);
+    }
+
     public function test_check_requires_all_identifiers_to_agree(): void {
         $gen = $this->get_generator();
         $idp = $gen->create_idp();

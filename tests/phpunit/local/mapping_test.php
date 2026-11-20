@@ -39,6 +39,26 @@ final class mapping_test extends \advanced_testcase {
         $this->resetAfterTest();
     }
 
+    public function test_site_administrators_are_managed_by_site_administrators_only(): void {
+        $admin = get_admin();
+        $user = $this->getDataGenerator()->create_user();
+
+        $this->setAdminUser();
+        $this->assertTrue(mapping::can_manage_user($admin->id));
+        $this->assertTrue(mapping::can_manage_user($user->id));
+        mapping::require_can_manage_user($admin->id);
+
+        $this->setUser($this->getDataGenerator()->create_user());
+        $this->assertTrue(mapping::can_manage_user($user->id));
+        $this->assertFalse(mapping::can_manage_user($admin->id));
+        try {
+            mapping::require_can_manage_user($admin->id);
+            $this->fail('exception expected');
+        } catch (\core\exception\moodle_exception $e) {
+            $this->assertSame('error_siteadminmapping', $e->errorcode);
+        }
+    }
+
     public function test_create_fetch_delete(): void {
         $gen = $this->getDataGenerator()->get_plugin_generator('auth_musaml');
         $idp = $gen->create_idp();

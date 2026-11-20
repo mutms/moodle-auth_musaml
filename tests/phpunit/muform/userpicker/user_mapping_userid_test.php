@@ -88,6 +88,32 @@ final class user_mapping_userid_test extends \advanced_testcase {
         $this->assertNull($source->validate([$value])[$value] ?? null);
     }
 
+    public function test_site_administrators_are_offered_to_site_administrators_only(): void {
+        /** @var \auth_musaml_generator $generator */
+        $generator = $this->getDataGenerator()->get_plugin_generator('auth_musaml');
+        $idp = $generator->create_idp(['name' => 'Some IDP']);
+        $admin = get_admin();
+        $other = $this->getDataGenerator()->create_user(['firstname' => 'Other', 'lastname' => 'Person']);
+
+        $manager = $this->getDataGenerator()->create_user();
+        $roleid = $this->getDataGenerator()->create_role();
+        assign_capability('auth/musaml:managemappings', CAP_ALLOW, $roleid, \core\context\system::instance());
+        role_assign($roleid, $manager->id, \core\context\system::instance());
+
+        $this->setUser($manager);
+        $source = new user_mapping_userid((int)$idp->id);
+        $results = $this->search($source, '');
+        $this->assertArrayNotHasKey((string)$admin->id, $results);
+        $this->assertArrayHasKey((string)$other->id, $results);
+        $value = (string)$admin->id;
+        $this->assertSame(get_string('error_siteadminmapping', 'auth_musaml'), $source->validate([$value])[$value] ?? null);
+
+        $this->setAdminUser();
+        $source = new user_mapping_userid((int)$idp->id);
+        $this->assertArrayHasKey((string)$admin->id, $this->search($source, ''));
+        $this->assertNull($source->validate([$value])[$value] ?? null);
+    }
+
     public function test_unknown_idp(): void {
         $this->setAdminUser();
         $this->expectException(\core\exception\invalid_parameter_exception::class);

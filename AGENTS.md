@@ -99,8 +99,11 @@ stored for a pending login wins, a later response cannot replace it.
 Do not accept unsolicited responses. Identity provider initiated login is not a missing
 feature, see the security section in `README.md`.
 
-User mappings decide who may sign in as whom. Web services refuse site administrator
-accounts unless the caller is one, and `auth/musaml:managemappings` has no archetypes.
+User mappings decide who may sign in as whom. Only site administrators manage the mapping
+of a site administrator: the pages, the CSV import and the user picker ask
+`mapping::can_manage_user()`, the web services check the same rule, and
+`auth/musaml:managemappings` has no archetypes. Mappings made automatically at login are not
+limited by it.
 
 The service provider private key lives in `config_plugins`, encrypted with the site key.
 It must never reach the file area, a log or a page.

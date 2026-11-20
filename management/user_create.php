@@ -58,6 +58,7 @@ if ($form->is_cancelled()) {
     $handler->cancelled($returnurl);
 }
 if ($data = $form->get_data()) {
+    mapping::require_can_manage_user((int)$data->userid);
     $mapping = mapping::create($data);
     if (!empty($data->setauth)) {
         mapping::set_user_auth($mapping->userid);

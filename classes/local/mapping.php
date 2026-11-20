@@ -158,6 +158,30 @@ final class mapping {
     }
 
     /**
+     * May the current user manage the mapping of this user?
+     *
+     * A mapping decides who may log in as the user, so site administrators are managed
+     * by site administrators only.
+     *
+     * @param int $userid
+     * @return bool
+     */
+    public static function can_manage_user(int $userid): bool {
+        return !is_siteadmin($userid) || is_siteadmin();
+    }
+
+    /**
+     * Stop unless the current user may manage the mapping of this user.
+     *
+     * @param int $userid
+     */
+    public static function require_can_manage_user(int $userid): void {
+        if (!self::can_manage_user($userid)) {
+            throw new \core\exception\moodle_exception('error_siteadminmapping', 'auth_musaml');
+        }
+    }
+
+    /**
      * Delete one mapping.
      *
      * @param int $id

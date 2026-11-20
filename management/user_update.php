@@ -43,6 +43,7 @@ require_capability('auth/musaml:managemappings', $context);
 
 $id = required_param('id', PARAM_INT);
 $mapping = $DB->get_record('auth_musaml_user', ['id' => $id], '*', MUST_EXIST);
+mapping::require_can_manage_user($mapping->userid);
 $user = $DB->get_record('user', ['id' => $mapping->userid], '*', MUST_EXIST);
 
 $pageurl = new \core\url('/auth/musaml/management/user_update.php', ['id' => $mapping->id]);

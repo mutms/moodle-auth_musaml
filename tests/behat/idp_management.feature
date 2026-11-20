@@ -373,6 +373,35 @@ Feature: SAML identity provider management
     And I click on "Delete user mapping" "button" in the "dialog[open]" "css_element"
     Then I should see "No users are mapped yet"
 
+  Scenario: Mapping manager cannot manage the mapping of a site administrator
+    Given the following "auth_musaml > idps" exist:
+      | name     | mapattr |
+      | Some IDP | UserID  |
+    And the following "users" exist:
+      | username | firstname | lastname | email              | auth   |
+      | mapper   | Map       | Manager  | mapper@example.com | manual |
+      | target   | Tar       | Get      | target@example.com | musaml |
+    And the following "roles" exist:
+      | shortname      | name            | archetype |
+      | mappingmanager | Mapping manager |           |
+    And the following "role capability" exists:
+      | role                         | mappingmanager |
+      | auth/musaml:managemappings   | allow          |
+      | moodle/site:viewuseridentity | allow          |
+    And the following "system role assigns" exist:
+      | user   | role           |
+      | mapper | mappingmanager |
+    And the following "auth_musaml > user mappings" exist:
+      | idp      | user   | guid    |
+      | Some IDP | admin  | admin-1 |
+      | Some IDP | target | guid-1  |
+    When I log in as "mapper"
+    And I am on the "Some IDP" "auth_musaml > idp mappings" page
+    Then I should see "admin-1"
+    And "Delete user mapping" "link" should not exist in the "Admin User" "table_row"
+    And "Update user mapping" "link" should not exist in the "Admin User" "table_row"
+    And "Delete user mapping" "link" should exist in the "Tar Get" "table_row"
+
   Scenario: Identity provider and mapping changes reach the site logs
     Given the following "auth_musaml > idps" exist:
       | name     | mapattr |

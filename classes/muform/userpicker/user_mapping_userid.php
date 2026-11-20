@@ -58,8 +58,17 @@ final class user_mapping_userid extends \tool_mulib\muform\userpicker\base {
 
     #[\Override]
     protected function get_candidates_sql(): ?sql {
+        global $CFG, $DB;
+
         // A user may have only one mapping, mapped users are not offered at all.
-        return new sql("NOT EXISTS (SELECT 1 FROM {auth_musaml_user} m WHERE m.userid = u.id)");
+        $where = "NOT EXISTS (SELECT 1 FROM {auth_musaml_user} m WHERE m.userid = u.id)";
+        $params = [];
+        $admins = array_filter(array_map('intval', explode(',', $CFG->siteadmins)));
+        if ($admins && !is_siteadmin()) {
+            [$notadmin, $params] = $DB->get_in_or_equal($admins, SQL_PARAMS_NAMED, 'musamladmin', false);
+            $where .= " AND u.id $notadmin";
+        }
+        return new sql($where, $params);
     }
 
     /**
@@ -76,7 +85,9 @@ final class user_mapping_userid extends \tool_mulib\muform\userpicker\base {
     public function validate(array $values): array {
         $errors = parent::validate($values);
         foreach ($values as $value) {
-            if (mapping::fetch_by_userid((int)$value)) {
+            if (!mapping::can_manage_user((int)$value)) {
+                $errors[(string)$value] = get_string('error_siteadminmapping', 'auth_musaml');
+            } else if (mapping::fetch_by_userid((int)$value)) {
                 $errors[(string)$value] = get_string('error_usermapped', 'auth_musaml');
             }
         }
