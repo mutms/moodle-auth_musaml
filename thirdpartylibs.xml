@@ -3,19 +3,37 @@
   <library>
     <location>vendor</location>
     <name>Composer autoloader</name>
-    <version>2.10.3</version>
+    <version>2.11.2</version>
     <license>MIT</license>
   </library>
   <library>
     <location>vendor/onelogin/php-saml</location>
     <name>SAML PHP Toolkit</name>
-    <version>4.4.0-dev (4.x-dev branch, commit 1f40cd0)</version>
+    <version>4.5.0</version>
     <license>MIT</license>
   </library>
   <library>
     <location>vendor/robrichards/xmlseclibs</location>
     <name>A PHP library for XML Security</name>
-    <version>3.1.5</version>
+    <version>4.0.2</version>
     <license>BSD-3-Clause</license>
+  </library>
+  <library>
+    <location>vendor/phpseclib/phpseclib</location>
+    <name>PHP Secure Communications Library</name>
+    <version>3.0.58</version>
+    <license>MIT</license>
+  </library>
+  <library>
+    <location>vendor/paragonie/constant_time_encoding</location>
+    <name>Constant-Time Encoding</name>
+    <version>3.1.5</version>
+    <license>MIT</license>
+  </library>
+  <library>
+    <location>vendor/paragonie/random_compat</location>
+    <name>random_compat</name>
+    <version>9.99.100</version>
+    <license>MIT</license>
   </library>
 </libraries>

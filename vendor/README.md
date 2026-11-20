@@ -4,7 +4,8 @@ This directory holds the third party PHP libraries used by auth_musaml, installe
 and committed to the repository, so the plugin works on sites installed from a ZIP file as well
 as on sites that manage plugins with Composer.
 
-Libraries: onelogin/php-saml (4.x branch) and robrichards/xmlseclibs.
+Libraries: onelogin/php-saml and its dependencies robrichards/xmlseclibs, phpseclib/phpseclib,
+paragonie/constant_time_encoding and paragonie/random_compat.
 
 ## Why the Composer autoloader is not used
 
@@ -59,11 +60,6 @@ Composer runs inside this directory, `composer.json` sets `"vendor-dir": "."`.
    generated maps, the maps are the only thing the loader uses.
 5. Run the plugin PHPUnit and Behat tests, then commit the whole directory including
    `composer.json`, `composer.lock`, `composer/` and this README.
-
-onelogin/php-saml is used from its 4.x development branch (`dev-4.x-dev` in `composer.json`),
-`composer update` moves it to the latest commit of that branch, record the commit in
-`thirdpartylibs.xml`. It requires robrichards/xmlseclibs ^3.1.5, version 4 cannot be used
-until php-saml allows it.
 
 Do not add the libraries to the Moodle root `composer.json` and do not require
 `vendor/autoload.php` anywhere.

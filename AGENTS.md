@@ -49,7 +49,7 @@ Change these only with the maintainer.
 | `docs/providers/`         | product setup notes    | one page per provider class, quirks and why             |
 | `classes/output/`         | markup shared by pages | no domain logic, no access decisions                    |
 | `classes/external/`       | web services           | check a capability, never `moodle/site:config`          |
-| `vendor/`                 | php-saml, xmlseclibs   | never edit, update with composer                        |
+| `vendor/`                 | php-saml and its deps  | never edit, update with composer                        |
 | `tests/behat/`            | three features         | the Zitadel and Keycloak ones need a real server        |
 
 ## Rules that are not visible from the structure
@@ -130,12 +130,13 @@ define('TEST_AUTH_MUSAML_KEYCLOAK_PASSWORD', '<password of the master realm admi
 Every test site gets its own realm named after the database name and prefix, with one
 client and one user in it, so parallel sites never collide. Without the constants the
 tests are skipped. The Behat feature is tagged `@auth_musaml_keycloak` and covers a login
-and a single logout, which Keycloak accepts and Zitadel does not.
+and single logout started on either side, which Keycloak accepts and Zitadel does not.
 
 ## External libraries
 
-`vendor/composer.json` tracks the upstream `4.x-dev` branch for `requireDestination`. Run
-`composer update` inside `vendor/`, then update `thirdpartylibs.xml`.
+`vendor/composer.json` requires stable php-saml releases, xmlseclibs, phpseclib and the
+paragonie libraries come in as its dependencies. Follow the upgrade steps in
+`vendor/README.md` and update `thirdpartylibs.xml` with every version change.
 
 ## Known traps
 

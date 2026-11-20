@@ -73,6 +73,16 @@ final class keycloak_client {
     }
 
     /**
+     * Logout page of the realm, it asks for a confirmation and ends the sessions of all clients.
+     *
+     * @return string
+     */
+    public static function get_logout_url(): string {
+        return rtrim(TEST_AUTH_MUSAML_KEYCLOAK_URL, '/')
+            . '/realms/' . self::get_realm() . '/protocol/openid-connect/logout';
+    }
+
+    /**
      * Make sure the realm, the SAML client and the test user exist.
      *
      * The client is replaced on every call because test sites regenerate the SP certificate.

@@ -42,6 +42,23 @@ Feature: SAML login round trip with the Keycloak test instance
     And I follow "Company login"
     Then "#kc-form-login" "css_element" should exist
 
+  Scenario: Single logout started at the identity provider ends the Moodle session
+    Given the following "users" exist:
+      | username      | firstname | lastname | email                    | auth   |
+      | musamltester  | Keycloak  | Tester   | musamltester@example.com | musaml |
+    And the auth_musaml identity provider "Company login" has "automap" set to "1"
+    And I visit "/login/index.php"
+    And I follow "Company login"
+    And I log in to Keycloak as the auth_musaml test user
+    And I should see "Keycloak Tester"
+    # Keycloak sends a logout request to the service provider and expects a signed answer.
+    When I log out of Keycloak as the auth_musaml test user
+    And I visit "/user/profile.php"
+    Then I should see "Log in"
+    And "Username" "field" should exist
+    When I follow "Company login"
+    Then "#kc-form-login" "css_element" should exist
+
   @tool_mutenancy
   Scenario: Tenant identity provider logs a user in through the tenant login page
     Given I skip tests if "tool_mutenancy" is not installed

@@ -945,7 +945,7 @@ final class login {
         if (isloggedin() && !isguestuser()) {
             $userid = $USER->id;
             \core\session\manager::terminate_current();
-            \core\session\manager::kill_user_sessions($userid);
+            \core\session\manager::destroy_user_sessions($userid);
         }
     }
 

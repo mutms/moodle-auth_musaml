@@ -119,6 +119,18 @@ final class behat_auth_musaml extends behat_base {
     }
 
     /**
+     * Sign out on the Keycloak logout page, Keycloak then logs out of every client of the session.
+     *
+     * @When I log out of Keycloak as the auth_musaml test user
+     */
+    public function keycloak_logout(): void {
+        $this->getSession()->visit(\auth_musaml\tests\keycloak_client::get_logout_url());
+        $this->execute('behat_general::wait_until_the_page_is_ready');
+        $this->execute('behat_general::i_click_on', ['#kc-logout', 'css_element']);
+        $this->execute('behat_general::wait_until_the_page_is_ready');
+    }
+
+    /**
      * Move an identity provider to a tenant, it then belongs to that login page only.
      *
      * @Given the auth_musaml identity provider :idpname belongs to the tenant :idnumber
