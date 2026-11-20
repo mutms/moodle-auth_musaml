@@ -67,11 +67,31 @@ for it and the quirks to expect. Anything else uses the generic provider.
 
 ## Security
 
-Logins must start at this site, so the application tiles in Entra, Okta and Google portals
-do not work. This is on purpose.
+Logins must start at this site. A response the identity provider sends on its own, without
+a request from this site, is refused. Such unsolicited responses are what the application
+tiles of Entra, Okta, Google and other portals send by default.
 
-A login started at the identity provider lets an attacker log someone else's browser into
-the attacker's account.
+This is on purpose. An unsolicited response carries no proof of which browser asked for it,
+so an attacker can post their own valid response to someone else's browser and log it into
+the attacker's account. Every accepted response here answers a request this site sent, and
+only the Moodle session that sent it can finish the login.
+
+### Application tiles
+
+A tile still works when it opens a URL of this site instead of sending a response. The site
+then sends a normal request, the identity provider already knows the user and answers it
+without asking for a password, so the user lands in Moodle just as with an unsolicited
+response:
+
+- `https://<site>/auth/musaml/login.php?id=<id>` starts the login at one identity provider,
+  the id is in the address of its page under Identity providers. Add
+  `&wantsurl=/course/view.php?id=2` to land on a particular page.
+- `https://<site>/login/index.php?tenant=<tenant idnumber>` opens the login page of a tenant,
+  use it for identity providers that belong to a tenant. With automatic login enabled for
+  the only identity provider of the tenant the user goes straight to it.
+
+How a tile is pointed to a URL depends on the product, see the page of the provider in
+[docs/providers](docs/providers).
 
 ## Compared with auth_saml2
 
