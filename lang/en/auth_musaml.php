@@ -119,6 +119,7 @@ $string['idp_enabled'] = 'Enabled';
 $string['idp_entityid'] = 'Entity ID';
 $string['idp_extracerts'] = 'Additional signing certificates';
 $string['idp_extracerts_help'] = 'Certificates accepted next to those from the metadata, in PEM format one after another. Use this during a key rollover when the identity provider has not published the new certificate yet.';
+$string['idp_loginurl'] = 'Login URL';
 $string['idp_logouturl'] = 'Single logout URL';
 $string['idp_mapattr'] = 'User ID attribute';
 $string['idp_mapattr_help'] = 'Attribute holding the permanent user identifier in the identity provider. It must never change for a user and never be reused. The special name "nameid" takes the value from the SAML NameID.';

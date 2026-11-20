@@ -123,6 +123,7 @@ $string['idp_enabled'] = 'Habilitado';
 $string['idp_entityid'] = 'ID de entidad';
 $string['idp_extracerts'] = 'Certificados de firma adicionales';
 $string['idp_extracerts_help'] = 'Certificados aceptados además de los de los metadatos, en formato PEM, uno tras otro. Utilícelo durante una rotación de claves cuando el proveedor de identidad todavía no ha publicado el nuevo certificado.';
+$string['idp_loginurl'] = 'URL de inicio de sesión';
 $string['idp_logouturl'] = 'URL de cierre de sesión único';
 $string['idp_mapattr'] = 'Atributo de ID de usuario';
 $string['idp_mapattr_help'] = 'Atributo que contiene el identificador permanente del usuario en el proveedor de identidad. Nunca debe cambiar para un usuario ni reutilizarse. El nombre especial "nameid" toma el valor del NameID de SAML.';

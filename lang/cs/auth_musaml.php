@@ -119,6 +119,7 @@ $string['idp_enabled'] = 'Povoleno';
 $string['idp_entityid'] = 'ID entity';
 $string['idp_extracerts'] = 'Další podpisové certifikáty';
 $string['idp_extracerts_help'] = 'Certifikáty přijímané vedle certifikátů z metadat, ve formátu PEM jeden za druhým. Použijte při výměně klíčů, když poskytovatel identity ještě nezveřejnil nový certifikát.';
+$string['idp_loginurl'] = 'URL přihlášení';
 $string['idp_logouturl'] = 'URL jednotného odhlášení';
 $string['idp_mapattr'] = 'Atribut ID uživatele';
 $string['idp_mapattr_help'] = 'Atribut s trvalým identifikátorem uživatele u poskytovatele identity. U uživatele se nesmí nikdy změnit a nesmí se znovu použít. Speciální název „nameid“ převezme hodnotu ze SAML NameID.';

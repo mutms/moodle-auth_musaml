@@ -111,6 +111,29 @@ final class login {
     }
 
     /**
+     * Switch an anonymous visitor to the tenant of the identity provider.
+     *
+     * @param stdClass $idp
+     */
+    public static function switch_to_idp_tenant(stdClass $idp): void {
+        global $CFG;
+
+        if (!$idp->tenantid || !\tool_mulib\local\mulib::is_mutenancy_active()) {
+            return;
+        }
+        if (isloggedin() && !isguestuser()) {
+            return;
+        }
+        if (isset($CFG->tool_mutenancy_forced_tenantid)) {
+            return;
+        }
+        if (self::get_current_tenantid() == $idp->tenantid || idp::is_tenant_archived($idp->tenantid)) {
+            return;
+        }
+        \tool_mutenancy\local\tenancy::switch((int)$idp->tenantid);
+    }
+
+    /**
      * Login page URL for the IDP.
      *
      * @param stdClass $idp

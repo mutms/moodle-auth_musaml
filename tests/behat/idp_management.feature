@@ -30,6 +30,7 @@ Feature: SAML identity provider management
     And I should see "Zitadel"
     And I should see "https://zitadel.example.com/saml/v2/SSO"
     And I should see "ZITADEL SAML response"
+    And I should see "/auth/musaml/login.php?id="
     When I follow "Attributes"
     Then I should see "UserName"
     And I should see "FirstName"

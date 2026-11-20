@@ -25,6 +25,7 @@
  */
 
 use auth_musaml\local\idp;
+use auth_musaml\local\login;
 use auth_musaml\local\provider\base as provider;
 use auth_musaml\local\saml;
 use tool_mulib\output\muform\dialog\button;
@@ -113,6 +114,10 @@ $details = new entity_details();
 $details->add(get_string('idp_name', 'auth_musaml'), format_string($idp->name));
 $details->add(get_string('idp_provider', 'auth_musaml'), $providerclass::get_name());
 $details->add(get_string('idp_enabled', 'auth_musaml'), $yesno($idp->enabled));
+$details->add(
+    get_string('idp_loginurl', 'auth_musaml'),
+    \auth_musaml\output\sp_urls::copyable(login::get_login_url($idp), 'auth_musaml_loginurl', $OUTPUT)
+);
 if (\tool_mulib\local\mulib::is_mutenancy_active()) {
     $details->add(get_string('idp_tenant', 'auth_musaml'), idp::get_tenant_name($idp));
 }

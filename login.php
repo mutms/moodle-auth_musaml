@@ -48,6 +48,9 @@ if (!is_enabled_auth('musaml') || !saml::has_sp_certificate()) {
 }
 
 $idp = idp::fetch($id);
+if ($idp && !$test) {
+    login::switch_to_idp_tenant($idp);
+}
 if (!$idp || !login::is_idp_available($idp)) {
     \core\notification::error(get_string('error_idpunavailable', 'auth_musaml'));
     redirect(login::get_retry_url());

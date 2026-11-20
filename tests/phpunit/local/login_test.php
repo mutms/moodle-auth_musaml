@@ -143,6 +143,52 @@ final class login_test extends \advanced_testcase {
         $this->assertTrue(login::is_idp_available($siteidp), 'site wide identity providers stay');
     }
 
+    public function test_switch_to_idp_tenant(): void {
+        if (!\tool_mulib\local\mulib::is_mutenancy_available()) {
+            $this->markTestSkipped('tool_mutenancy is not installed');
+        }
+        $gen = $this->get_generator();
+        /** @var \tool_mutenancy_generator $tenancygen */
+        $tenancygen = $this->getDataGenerator()->get_plugin_generator('tool_mutenancy');
+        $tenant1 = $tenancygen->create_tenant();
+        $tenant2 = $tenancygen->create_tenant();
+        $tenant3 = $tenancygen->create_tenant();
+        $idp1 = $gen->create_idp(['tenantid' => $tenant1->id]);
+        $idp3 = $gen->create_idp(['tenantid' => $tenant3->id]);
+        $siteidp = $gen->create_idp();
+
+        $this->assertNull(login::get_current_tenantid());
+        login::switch_to_idp_tenant($siteidp);
+        $this->assertNull(login::get_current_tenantid(), 'site identity providers keep the current tenant');
+
+        login::switch_to_idp_tenant($idp1);
+        $this->assertSame((int)$tenant1->id, login::get_current_tenantid());
+        $this->assertTrue(login::is_idp_available($idp1));
+
+        \tool_mutenancy\local\tenant::archive($tenant3->id);
+        login::switch_to_idp_tenant(idp::fetch($idp3->id));
+        $this->assertSame((int)$tenant1->id, login::get_current_tenantid(), 'archived tenants are not entered');
+
+        \tool_mutenancy\local\tenancy::force_current_tenantid($tenant2->id);
+        login::switch_to_idp_tenant($idp1);
+        $this->assertSame((int)$tenant2->id, login::get_current_tenantid(), 'a forced tenant wins');
+        $this->assertFalse(login::is_idp_available($idp1));
+    }
+
+    public function test_switch_to_idp_tenant_logged_in(): void {
+        if (!\tool_mulib\local\mulib::is_mutenancy_available()) {
+            $this->markTestSkipped('tool_mutenancy is not installed');
+        }
+        /** @var \tool_mutenancy_generator $tenancygen */
+        $tenancygen = $this->getDataGenerator()->get_plugin_generator('tool_mutenancy');
+        $tenant = $tenancygen->create_tenant();
+        $idp = $this->get_generator()->create_idp(['tenantid' => $tenant->id]);
+
+        $this->setUser($this->getDataGenerator()->create_user());
+        login::switch_to_idp_tenant($idp);
+        $this->assertNull(login::get_current_tenantid(), 'logged in users are not moved');
+    }
+
     public function test_tenant_idp_response_is_accepted_without_a_tenant(): void {
         if (!\tool_mulib\local\mulib::is_mutenancy_available()) {
             $this->markTestSkipped('tool_mutenancy is not installed');

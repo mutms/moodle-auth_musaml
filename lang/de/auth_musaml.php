@@ -123,6 +123,7 @@ $string['idp_enabled'] = 'Aktiviert';
 $string['idp_entityid'] = 'Entity-ID';
 $string['idp_extracerts'] = 'Zusätzliche Signaturzertifikate';
 $string['idp_extracerts_help'] = 'Zertifikate, die neben denen aus den Metadaten akzeptiert werden, im PEM-Format nacheinander. Verwenden Sie dies während eines Schlüsselwechsels, wenn der Identitätsanbieter das neue Zertifikat noch nicht veröffentlicht hat.';
+$string['idp_loginurl'] = 'Anmelde-URL';
 $string['idp_logouturl'] = 'Single-Logout-URL';
 $string['idp_mapattr'] = 'Nutzer-ID-Attribut';
 $string['idp_mapattr_help'] = 'Attribut, das die dauerhafte Nutzerkennung beim Identitätsanbieter enthält. Es darf sich für eine/n Nutzer/in nie ändern und nie wiederverwendet werden. Der spezielle Name „nameid“ übernimmt den Wert aus der SAML-NameID.';

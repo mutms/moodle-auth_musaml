@@ -263,6 +263,8 @@ final class behat_auth_musaml extends behat_base {
                 return new moodle_url('/auth/musaml/management/attributes.php', ['id' => $idpid]);
             case 'idp mappings':
                 return new moodle_url('/auth/musaml/management/users.php', ['id' => $idpid]);
+            case 'idp login':
+                return new moodle_url('/auth/musaml/login.php', ['id' => $idpid]);
             default:
                 throw new Exception('Unrecognised auth_musaml page type "' . $type . '."');
         }

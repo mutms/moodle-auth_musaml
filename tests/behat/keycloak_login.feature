@@ -81,6 +81,21 @@ Feature: SAML login round trip with the Keycloak test instance
     Then I should see "Keycloak Tester"
 
   @tool_mutenancy
+  Scenario: Login URL of a tenant identity provider works in a browser without a tenant
+    Given I skip tests if "tool_mutenancy" is not installed
+    And the following "tool_mutenancy > tenants" exist:
+      | name     | idnumber |
+      | Tenant 1 | TEN1     |
+    And the following "users" exist:
+      | username     | firstname | lastname | email                    | auth   | tenant |
+      | musamltester | Keycloak  | Tester   | musamltester@example.com | musaml | TEN1   |
+    And the auth_musaml identity provider "Company login" belongs to the tenant "TEN1"
+    And the auth_musaml identity provider "Company login" has "automap" set to "1"
+    When I am on the "Company login" "auth_musaml > idp login" page
+    And I log in to Keycloak as the auth_musaml test user
+    Then I should see "Keycloak Tester"
+
+  @tool_mutenancy
   Scenario: Tenant identity provider creates the new account in its own tenant
     Given I skip tests if "tool_mutenancy" is not installed
     And the following "tool_mutenancy > tenants" exist:

@@ -83,12 +83,13 @@ then sends a normal request, the identity provider already knows the user and an
 without asking for a password, so the user lands in Moodle just as with an unsolicited
 response:
 
-- `https://<site>/auth/musaml/login.php?id=<id>` starts the login at one identity provider,
-  the id is in the address of its page under Identity providers. Add
-  `&wantsurl=/course/view.php?id=2` to land on a particular page.
-- `https://<site>/login/index.php?tenant=<tenant idnumber>` opens the login page of a tenant,
-  use it for identity providers that belong to a tenant. With automatic login enabled for
-  the only identity provider of the tenant the user goes straight to it.
+- The **Login URL** shown on the page of each identity provider,
+  `https://<site>/auth/musaml/login.php?id=<id>`, starts the login at that identity
+  provider. It works for identity providers of a tenant too, the visitor is moved to the
+  tenant first. Add `&wantsurl=/course/view.php?id=2` to land on a particular page.
+- `https://<site>/login/index.php?tenant=<tenant idnumber>` opens the login page of a tenant
+  with all its identity providers. With automatic login enabled for the only identity
+  provider of the tenant the user goes straight to it.
 
 How a tile is pointed to a URL depends on the product, see the page of the provider in
 [docs/providers](docs/providers).
