@@ -15,10 +15,10 @@ Applications, Create App Integration, **SAML 2.0**.
    - Audience URI: `https://<site>/auth/musaml/metadata.php`
    - Default RelayState: empty, logins must start at Moodle
    - Name ID format: EmailAddress, Application username: Okta username
-2. Attribute statements. The value syntax depends on the org, newer ones want
-   `user.profile.<property>`, and the Value field offers a picker:
+2. Sign On tab, Attribute statements. Newer orgs keep them here, not in the SAML
+   settings of the General tab, without them Okta sends the NameID only:
 
-   | Name        | Value                     |
+   | Name        | Expression                |
    |-------------|---------------------------|
    | `id`        | `user.id`                 |
    | `login`     | `user.profile.login`      |
@@ -26,9 +26,18 @@ Applications, Create App Integration, **SAML 2.0**.
    | `firstName` | `user.profile.firstName`  |
    | `lastName`  | `user.profile.lastName`   |
 
-3. Assignments, assign the app to the people who may use it. Without this the login
-   fails at Okta.
-4. Sign On tab, copy the Identity Provider metadata URL.
+3. Assignments, assign the app to the people who may use it, before the first login.
+   Without this Okta answers "User is not assigned to this application" and never
+   returns to Moodle.
+4. Single logout, General tab, edit the SAML settings, Show Advanced Settings:
+   - Signature Certificate: upload the file from "Download certificate" on the
+     **Identity providers** page, Okta verifies logout requests with it
+   - tick "Allow application to initiate Single Logout"
+   - Single Logout URL: `https://<site>/auth/musaml/endpoints/sls.php`
+   - SP Issuer: the entity ID, `https://<site>/auth/musaml/metadata.php`
+
+   The upload has to be repeated after the service provider certificate is regenerated.
+5. Sign On tab, copy the Identity Provider metadata URL.
 
 ## What the class does
 
@@ -43,6 +52,11 @@ address, which people change. The `id` attribute statement carries the internal 
 id, such as `00u17ugqi3hY9nqOC698`, and never changes, so the class maps users on that.
 Without that attribute statement every login fails with "did not send exactly one value
 of the user ID attribute".
+
+**Single logout fails without the SP Issuer.** The field is optional in the form, but
+when it is empty Okta answers every logout request with `AuthnFailed` and keeps its own
+session, while Moodle still ends the local one. Okta sends the logout response with the
+HTTP-POST binding, whatever the service provider metadata asks for.
 
 **Free orgs insist on the Okta Verify app.** To use a normal TOTP application, first
 enable Google Authenticator for the whole org under Security, Authenticators, then

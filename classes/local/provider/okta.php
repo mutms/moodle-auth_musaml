@@ -26,9 +26,6 @@ use auth_musaml\local\attribute;
  * Okta applications define their own attribute statements, the defaults here match
  * the attribute names the Okta setup guides use.
  *
- * NOTE: defaults are based on the Okta documentation, they still need to be verified
- * against a real organisation.
- *
  * @package    auth_musaml
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

@@ -49,6 +49,19 @@ final class sp_urls {
         $details->add(get_string('sp_acsurl', 'auth_musaml'), $acs);
         $slo = self::copyable(saml::get_endpoint_url('sls'), 'auth_musaml_slourl', $output);
         $details->add(get_string('sp_slourl', 'auth_musaml'), $slo);
+        $details->add(get_string('sp_cert', 'auth_musaml'), self::certificate($output));
+    }
+
+    /**
+     * Certificate download link, identity providers configured by hand ask for the file.
+     *
+     * @param renderer_base $output
+     * @return string
+     */
+    public static function certificate(renderer_base $output): string {
+        $url = new url('/auth/musaml/management/sp_cert_download.php');
+        $icon = $output->pix_icon('t/download', '');
+        return html_writer::link($url, $icon . get_string('sp_cert_download', 'auth_musaml'));
     }
 
     /**
