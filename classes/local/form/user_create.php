@@ -19,7 +19,7 @@
 namespace auth_musaml\local\form;
 
 use auth_musaml\local\mapping;
-use auth_musaml\muform\userpicker\user_mapping_userid;
+use auth_musaml\picker\user\user_mapping_userid;
 use tool_mulib\muform\element\buttons;
 use tool_mulib\muform\element\cancel;
 use tool_mulib\muform\element\checkbox;

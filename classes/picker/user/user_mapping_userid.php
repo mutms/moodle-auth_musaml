@@ -16,7 +16,7 @@
 
 // phpcs:disable moodle.Files.BoilerplateComment.CommentEndedTooSoon
 
-namespace auth_musaml\muform\userpicker;
+namespace auth_musaml\picker\user;
 
 use auth_musaml\local\idp;
 use auth_musaml\local\mapping;
@@ -29,7 +29,7 @@ use tool_mulib\local\sql;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class user_mapping_userid extends \tool_mulib\muform\userpicker\base {
+final class user_mapping_userid extends \tool_mulib\picker\user\base {
     /** @var int identity provider id */
     private int $idpid;
 

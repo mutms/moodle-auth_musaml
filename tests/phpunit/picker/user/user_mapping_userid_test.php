@@ -18,9 +18,9 @@
 
 // phpcs:disable moodle.Commenting.DocblockDescription.Missing
 
-namespace auth_musaml\phpunit\muform\userpicker;
+namespace auth_musaml\phpunit\picker\user;
 
-use auth_musaml\muform\userpicker\user_mapping_userid;
+use auth_musaml\picker\user\user_mapping_userid;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -31,7 +31,7 @@ use PHPUnit\Framework\Attributes\Group;
  * @copyright  2026 Petr Skoda
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-#[CoversClass(\auth_musaml\muform\userpicker\user_mapping_userid::class)]
+#[CoversClass(\auth_musaml\picker\user\user_mapping_userid::class)]
 #[Group('MuTMS')]
 final class user_mapping_userid_test extends \advanced_testcase {
     #[\Override]
@@ -43,12 +43,12 @@ final class user_mapping_userid_test extends \advanced_testcase {
     /**
      * Users on the first page of the panel.
      *
-     * @param \tool_mulib\muform\userpicker\base $source
+     * @param \tool_mulib\picker\user\base $source
      * @param string $query
      * @param string[] $exclude
      * @return array user id => label html
      */
-    private function search(\tool_mulib\muform\userpicker\base $source, string $query, array $exclude = []): array {
+    private function search(\tool_mulib\picker\user\base $source, string $query, array $exclude = []): array {
         $result = $source->search($query, $exclude, 0, []);
         return array_combine(array_column($result['rows'], 'id'), array_column($result['rows'], 'label'));
     }
