@@ -94,14 +94,12 @@ Feature: SAML identity provider management
     # The SAML user is not mapped to any identity provider account yet, locks still apply.
     When I am on the "TEN1" "tool_mutenancy > Tenant users" page
     Then I should see "Sam User"
-    And I open the action menu in "Sam User" "table_row"
-    And I choose "Edit" in the open action menu
+    And I click on "Edit" action in the "Sam User" mureport row
     Then the "email" "field" should be disabled
     And the "firstname" "field" should be disabled
     And the "city" "field" should be enabled
     And I press "Cancel"
-    When I open the action menu in "Man Ual" "table_row"
-    And I choose "Edit" in the open action menu
+    When I click on "Edit" action in the "Man Ual" mureport row
     Then the "email" "field" should be enabled
 
   Scenario: Admin manages attribute mappings of an identity provider
