@@ -73,6 +73,11 @@ final class wizard extends \tool_mulib\muform\wizard_page {
     }
 
     #[\Override]
+    protected function is_reset_allowed(): bool {
+        return true;
+    }
+
+    #[\Override]
     protected function get_page_url(): url {
         return new url('/auth/musaml/management/user_upload.php', ['id' => $this->idp->id]);
     }

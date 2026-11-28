@@ -209,9 +209,14 @@ Feature: SAML identity provider management
       | headers | 1 |
     # The read data cannot be changed any more.
     When I press "Back"
-    Then I should see "4 rows were read. Cancel the wizard to use different data."
+    Then I should see "4 rows were read. Use Start again to read different data."
     And "textarea[name='csvtext']" "css_element" should not exist
-    When I press "Continue"
+    When I press "Start again"
+    And I click on "Yes" "button" in the ".modal-dialog" "css_element"
+    Then I should see "Step 1 of 3" in the ".muform-wizardbuttons" "css_element"
+    When I set the following muform fields:
+      | csvtext | guid,email\nz-1,one@example.com\nz-2,two@example.com\nz-3,nobody@example.com |
+    And I press "Continue"
     Then the following muform fields match:
       | headers | 1 |
     And I press "Continue"

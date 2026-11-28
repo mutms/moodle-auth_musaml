@@ -19,7 +19,6 @@
 namespace auth_musaml\local\wizard\user_upload;
 
 use auth_musaml\local\mapping_import;
-use tool_mulib\muform\element\buttons;
 use tool_mulib\muform\element\cancel;
 use tool_mulib\muform\element\checkbox;
 use tool_mulib\muform\element\info;
@@ -27,6 +26,7 @@ use tool_mulib\muform\element\inforawhtml;
 use tool_mulib\muform\element\reload;
 use tool_mulib\muform\element\submit;
 use tool_mulib\muform\element\wizardback;
+use tool_mulib\muform\element\wizardbuttons;
 use tool_mulib\muform\form;
 
 /**
@@ -69,13 +69,13 @@ final class options extends form {
         $this->add(new inforawhtml('preview', '', $this->render_preview($outcomes)));
 
         // The import button comes first so that Enter never skips the dry run of other options.
-        $this->add(new buttons('buttons'));
+        $this->add(new wizardbuttons());
         if (self::is_importable($outcomes)) {
-            $this->add(new submit('submit', get_string('import_confirm', 'auth_musaml')), 'buttons');
+            $this->add(new submit('submit', get_string('import_confirm', 'auth_musaml')), wizardbuttons::NAME);
         }
-        $this->add(new reload('refresh', get_string('import_refresh', 'auth_musaml')), 'buttons');
-        $this->add(new wizardback(validate: false), 'buttons');
-        $this->add(new cancel(), 'buttons');
+        $this->add(new reload('refresh', get_string('import_refresh', 'auth_musaml')), wizardbuttons::NAME);
+        $this->add(new wizardback(validate: false), wizardbuttons::NAME);
+        $this->add(new cancel(), wizardbuttons::NAME);
     }
 
     /**
